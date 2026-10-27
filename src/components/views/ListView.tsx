@@ -66,6 +66,7 @@ function TaskRow({
 }) {
   const { projects, deleteTask, moveTask, updateTask, addChecklistItem, toggleChecklistItem, updateChecklistItem, deleteChecklistItem, reorderChecklist, duplicateTask, saving, members } = useApp()
   const [savingDate, setSavingDate] = useState(false)
+  const [dueDateDraft, setDueDateDraft] = useState(task.dueDate ?? "")
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(task.title)
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -97,6 +98,11 @@ function TaskRow({
     if (!saving) setSavingDate(false)
   }, [saving])
 
+  // Mantém o rascunho da data sincronizado com a tarefa salva
+  useEffect(() => {
+    setDueDateDraft(task.dueDate ?? "")
+  }, [task.id, task.dueDate])
+
   async function handleDelete() {
     const ok = await showConfirm({ title: `Excluir "${task.title}"?`, description: "Esta ação não pode ser desfeita.", confirmLabel: "Excluir", variant: "destructive" })
     if (ok) deleteTask(task.id)
@@ -123,10 +129,23 @@ function TaskRow({
     if (ok) toast.success(isDone ? "Tarefa reaberta" : "Tarefa concluída!")
   }
 
+  // Grava a data no banco, mas só se ela estiver completa e válida
+  function commitDueDate(value: string) {
+    if ((value || null) === (task.dueDate ?? null)) return
+    if (value) {
+      const year = Number(value.slice(0, 4))
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || year < 1900 || year > 2200) return
+    }
+    setSavingDate(true)
+    updateTask(task.id, { dueDate: value || null })
+  }
+
   function handleDueDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     e.stopPropagation()
-    setSavingDate(true)
-    updateTask(task.id, { dueDate: e.target.value || null })
+    const value = e.target.value
+    setDueDateDraft(value)
+    // só salva quando o ano já está completo (4 dígitos)
+    if (value) commitDueDate(value)
   }
 
   function addChecklistItemLocal() {
@@ -303,8 +322,12 @@ function TaskRow({
             )}
             <input
               type="date"
-              value={task.dueDate ?? ""}
+              value={dueDateDraft}
               onChange={handleDueDateChange}
+              onBlur={e => {
+                if (e.target.validity.badInput) return
+                commitDueDate(e.target.value)
+              }}
               className={cn(
                 "text-xs bg-transparent outline-none w-16 cursor-pointer",
                 overdue ? "text-red-500 font-medium" : dueToday ? "text-yellow-600 font-medium" : "text-muted-foreground"
@@ -768,7 +791,7 @@ export function ListView({ onOpenTask, todayFilter = false, noDueDateFilter = fa
     const csv = [headers, ...rows]
       .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))
       .join("\n")
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" })
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url

@@ -55,6 +55,7 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
 
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description)
+  const [dueDate, setDueDate] = useState(task.dueDate ?? "")
   const [commentText, setCommentText] = useState("")
   const [newChecklistText, setNewChecklistText] = useState("")
   const [tab, setTab] = useState<"checklist" | "comments" | "activity" | "links">("comments")
@@ -67,6 +68,11 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
     setDescription(task.description)
     setCommentText("")
   }, [task.id, task.title, task.description])
+
+  // Mantém o rascunho da data sincronizado com a tarefa salva
+  useEffect(() => {
+    setDueDate(task.dueDate ?? "")
+  }, [task.id, task.dueDate])
 
   const checklist = task.checklist ?? []
   const comments = task.comments ?? []
@@ -99,8 +105,20 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
     updateTask(task.id, { projectId }, `Projeto alterado para ${p?.name ?? ""}`)
   }
 
-  function handleDueDateChange(dueDate: string) {
-    updateTask(task.id, { dueDate: dueDate || null }, dueDate ? "Data de entrega definida" : "Data de entrega removida")
+  // Grava a data no banco, mas só se ela estiver completa e válida
+  function commitDueDate(value: string) {
+    if ((value || null) === (task.dueDate ?? null)) return
+    if (value) {
+      const year = Number(value.slice(0, 4))
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || year < 1900 || year > 2200) return
+    }
+    updateTask(task.id, { dueDate: value || null }, value ? "Data de entrega definida" : "Data de entrega removida")
+  }
+
+  function handleDueDateChange(value: string) {
+    setDueDate(value)
+    // só salva quando o ano já está completo (4 dígitos)
+    if (value) commitDueDate(value)
   }
 
   function handleRecurringChange(val: string) {
@@ -245,8 +263,12 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
               <input
                 type="date"
                 className="h-7 text-xs bg-transparent outline-none w-full px-1.5"
-                value={task.dueDate ?? ""}
+                value={dueDate}
                 onChange={e => handleDueDateChange(e.target.value)}
+                onBlur={e => {
+                  if (e.target.validity.badInput) return
+                  commitDueDate(e.target.value)
+                }}
               />
             </CompactProp>
 

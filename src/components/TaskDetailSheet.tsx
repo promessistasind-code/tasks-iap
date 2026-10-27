@@ -55,6 +55,7 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
 
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description)
+  const [dueDate, setDueDate] = useState(task.dueDate ?? "")
   const [commentText, setCommentText] = useState("")
   const [newChecklistText, setNewChecklistText] = useState("")
   const [tab, setTab] = useState<"checklist" | "comments" | "activity" | "links">("comments")
@@ -65,8 +66,9 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
   useEffect(() => {
     setTitle(task.title)
     setDescription(task.description)
+    setDueDate(task.dueDate ?? "")
     setCommentText("")
-  }, [task.id, task.title, task.description])
+  }, [task.id, task.title, task.description, task.dueDate])
 
   const checklist = task.checklist ?? []
   const comments = task.comments ?? []
@@ -99,8 +101,11 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
     updateTask(task.id, { projectId }, `Projeto alterado para ${p?.name ?? ""}`)
   }
 
-  function handleDueDateChange(dueDate: string) {
-    updateTask(task.id, { dueDate: dueDate || null }, dueDate ? "Data de entrega definida" : "Data de entrega removida")
+  async function handleDueDateBlur() {
+    if (dueDate && !/^\\d{4}-\\d{2}-\\d{2}$/.test(dueDate)) return
+    const newDate = dueDate || null
+    if (newDate === task.dueDate) return
+    await updateTask(task.id, { dueDate: newDate }, newDate ? "Data de entrega definida" : "Data de entrega removida")
   }
 
   function handleRecurringChange(val: string) {
@@ -245,8 +250,9 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
               <input
                 type="date"
                 className="h-7 text-xs bg-transparent outline-none w-full px-1.5"
-                value={task.dueDate ?? ""}
-                onChange={e => handleDueDateChange(e.target.value)}
+                value={dueDate}
+                onChange={e => setDueDate(e.target.value)}
+                onBlur={handleDueDateBlur}
               />
             </CompactProp>
 

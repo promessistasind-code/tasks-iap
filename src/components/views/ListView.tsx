@@ -66,6 +66,7 @@ function TaskRow({
 }) {
   const { projects, deleteTask, moveTask, updateTask, addChecklistItem, toggleChecklistItem, updateChecklistItem, deleteChecklistItem, reorderChecklist, duplicateTask, saving, members } = useApp()
   const [savingDate, setSavingDate] = useState(false)
+  const [dueDate, setDueDate] = useState(task.dueDate ?? "")
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(task.title)
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -92,6 +93,10 @@ function TaskRow({
   const overdue = task.dueDate && !isDone && isPast(parseISO(task.dueDate)) && !isToday(parseISO(task.dueDate))
   const dueToday = task.dueDate && !isDone && isToday(parseISO(task.dueDate))
   const checklist = task.checklist ?? []
+
+  useEffect(() => {
+    setDueDate(task.dueDate ?? "")
+  }, [task.dueDate])
 
   useEffect(() => {
     if (!saving) setSavingDate(false)
@@ -125,8 +130,15 @@ function TaskRow({
 
   function handleDueDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     e.stopPropagation()
+    setDueDate(e.target.value)
+  }
+
+  async function handleDueDateBlur() {
+    if (dueDate && !/^\\d{4}-\\d{2}-\\d{2}$/.test(dueDate)) return
+    const newDate = dueDate || null
+    if (newDate === task.dueDate) return
     setSavingDate(true)
-    updateTask(task.id, { dueDate: e.target.value || null })
+    await updateTask(task.id, { dueDate: newDate })
   }
 
   function addChecklistItemLocal() {
@@ -303,8 +315,9 @@ function TaskRow({
             )}
             <input
               type="date"
-              value={task.dueDate ?? ""}
+              value={dueDate}
               onChange={handleDueDateChange}
+              onBlur={handleDueDateBlur}
               className={cn(
                 "text-xs bg-transparent outline-none w-16 cursor-pointer",
                 overdue ? "text-red-500 font-medium" : dueToday ? "text-yellow-600 font-medium" : "text-muted-foreground"

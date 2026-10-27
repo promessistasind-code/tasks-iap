@@ -218,7 +218,7 @@ function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) =>
             value={dueDate}
             onChange={e => setDueDate(e.target.value)}
             onBlur={() => {
-              if (dueDate && !/^\\d{4}-\\d{2}-\\d{2}$/.test(dueDate)) return
+              if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return
               const newDate = dueDate || null
               if (newDate !== task.dueDate) updateTask(task.id, { dueDate: newDate })
             }}

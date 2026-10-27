@@ -102,7 +102,7 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
   }
 
   async function handleDueDateBlur() {
-    if (dueDate && !/^\\d{4}-\\d{2}-\\d{2}$/.test(dueDate)) return
+    if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return
     const newDate = dueDate || null
     if (newDate === task.dueDate) return
     await updateTask(task.id, { dueDate: newDate }, newDate ? "Data de entrega definida" : "Data de entrega removida")

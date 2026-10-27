@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useApp } from "@/context/AppContext"
 import type { Task, Status } from "@/types/task"
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types/task"
@@ -88,9 +88,14 @@ function InlineAdd({ status, defaultProjectId }: { status: Status; defaultProjec
 function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) => void }) {
   const { moveTask, projects, addChecklistItem, toggleChecklistItem, updateTask } = useApp()
   const [checklistOpen, setChecklistOpen] = useState(false)
+  const [dueDate, setDueDate] = useState(task.dueDate ?? "")
   const [newItem, setNewItem] = useState("")
   const newItemRef = useRef<HTMLInputElement>(null)
   const [editingTitle, setEditingTitle] = useState(false)
+
+  useEffect(() => {
+    setDueDate(task.dueDate ?? "")
+  }, [task.dueDate])
   const [titleValue, setTitleValue] = useState(task.title)
   const titleInputRef = useRef<HTMLInputElement>(null)
 
@@ -210,8 +215,13 @@ function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) =>
           <CalendarDays className={cn("size-3 shrink-0", overdue ? "text-red-500" : dueToday ? "text-yellow-600" : "text-muted-foreground")} />
           <input
             type="date"
-            value={task.dueDate ?? ""}
-            onChange={e => { updateTask(task.id, { dueDate: e.target.value || null }) }}
+            value={dueDate}
+            onChange={e => setDueDate(e.target.value)}
+            onBlur={() => {
+              if (dueDate && !/^\\d{4}-\\d{2}-\\d{2}$/.test(dueDate)) return
+              const newDate = dueDate || null
+              if (newDate !== task.dueDate) updateTask(task.id, { dueDate: newDate })
+            }}
             className={cn(
               "text-xs bg-transparent outline-none cursor-pointer w-[86px]",
               overdue ? "text-red-500 font-medium" : dueToday ? "text-yellow-600 font-medium" : "text-muted-foreground"

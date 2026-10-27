@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useApp } from "@/context/AppContext"
 import type { Task, Status } from "@/types/task"
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types/task"
@@ -92,7 +92,13 @@ function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) =>
   const newItemRef = useRef<HTMLInputElement>(null)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(task.title)
+  const [dueDateDraft, setDueDateDraft] = useState(task.dueDate ?? "")
   const titleInputRef = useRef<HTMLInputElement>(null)
+
+  // Mantém o rascunho da data sincronizado com a tarefa salva
+  useEffect(() => {
+    setDueDateDraft(task.dueDate ?? "")
+  }, [task.id, task.dueDate])
 
   function startEditTitle(e: React.MouseEvent) {
     e.stopPropagation()
@@ -108,6 +114,23 @@ function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) =>
     }
     setEditingTitle(false)
   }
+
+  // Grava a data no banco, mas só se ela estiver completa e válida
+  function commitDueDate(value: string) {
+    if ((value || null) === (task.dueDate ?? null)) return
+    if (value) {
+      const year = Number(value.slice(0, 4))
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || year < 1900 || year > 2200) return
+    }
+    updateTask(task.id, { dueDate: value || null })
+  }
+
+  function handleDueDateChange(value: string) {
+    setDueDateDraft(value)
+    // só salva quando o ano já está completo (4 dígitos)
+    if (value) commitDueDate(value)
+  }
+
   const project = projects.find(p => p.id === task.projectId)
   const priority = PRIORITY_CONFIG[task.priority]
   const isDone = task.status === "done"
@@ -210,8 +233,12 @@ function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) =>
           <CalendarDays className={cn("size-3 shrink-0", overdue ? "text-red-500" : dueToday ? "text-yellow-600" : "text-muted-foreground")} />
           <input
             type="date"
-            value={task.dueDate ?? ""}
-            onChange={e => { updateTask(task.id, { dueDate: e.target.value || null }) }}
+            value={dueDateDraft}
+            onChange={e => handleDueDateChange(e.target.value)}
+            onBlur={e => {
+              if (e.target.validity.badInput) return
+              commitDueDate(e.target.value)
+            }}
             className={cn(
               "text-xs bg-transparent outline-none cursor-pointer w-[86px]",
               overdue ? "text-red-500 font-medium" : dueToday ? "text-yellow-600 font-medium" : "text-muted-foreground"

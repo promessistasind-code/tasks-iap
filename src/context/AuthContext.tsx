@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import type { Profile } from "@/types/auth"
+import { peopleApi, type AccountStatus } from "@/lib/people"
 
 function mapProfile(row: Record<string, unknown>): Profile {
   return {
@@ -20,6 +21,9 @@ interface AuthContextValue {
   profile: Profile | null
   loading: boolean
   isAdmin: boolean
+  access: AccountStatus | null
+  accessError: string | null
+  refreshAccess: () => Promise<void>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
@@ -30,14 +34,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [access, setAccess] = useState<AccountStatus | null>(null)
+  const [accessError, setAccessError] = useState<string | null>(null)
+
+  async function refreshAccess() {
+    try { setAccess(await peopleApi<AccountStatus>("status")); setAccessError(null) }
+    catch (err) { setAccess(null); setAccessError(err instanceof Error ? err.message : "Falha ao verificar acesso") }
+  }
 
   useEffect(() => {
     let active = true
     let currentUserId: string | null = null
     let profileTimer: ReturnType<typeof setTimeout> | undefined
     async function loadProfile(userId: string) {
-      const { data } = await supabase.from("profiles").select("*").eq("id", userId).single()
+      const { data } = await supabase.from("profiles").select("id,name,color,initials,is_admin,created_at").eq("id", userId).single()
       if (active && currentUserId === userId) setProfile(data ? mapProfile(data) : null)
+      try {
+        const status = await peopleApi<AccountStatus>("status")
+        if (active && currentUserId === userId) { setAccess(status); setAccessError(null); setProfile(p => p ? { ...p, email: status.email } : null) }
+      } catch (err) {
+        if (active && currentUserId === userId) { setAccess(null); setAccessError(err instanceof Error ? err.message : "Falha ao verificar acesso") }
+      }
     }
     let settled = false
     function finishLoading() {
@@ -63,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       if (!active) return
-      if (currentUserId !== (s?.user.id ?? null)) setProfile(null)
+      if (currentUserId !== (s?.user.id ?? null)) { setProfile(null); setAccess(null); setAccessError(null) }
       currentUserId = s?.user.id ?? null
       setSession(s)
       clearTimeout(profileTimer)
@@ -92,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // não fica trancado dentro do app sem conseguir sair.
     setSession(null)
     setProfile(null)
+    setAccess(null)
     try {
       Object.keys(localStorage)
         .filter(k => k.startsWith("sb-"))
@@ -103,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, isAdmin: !!profile?.isAdmin, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, profile, loading, access, accessError, refreshAccess, isAdmin: !!access?.isAdmin, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

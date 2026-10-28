@@ -4,6 +4,14 @@ INSERT INTO auth.users(id,email) VALUES
 ('10000000-0000-0000-0000-000000000002','foundation-member@example.invalid'),
 ('10000000-0000-0000-0000-000000000003','foundation-outsider@example.invalid');
 INSERT INTO public.profiles(id,email,name,initials) SELECT id,email,'Foundation test','FT' FROM auth.users WHERE email LIKE 'foundation-%@example.invalid';
+-- Complete test-only identities when the phase 2 access gate is installed.
+DO $$ BEGIN
+ IF to_regclass('private.account_access') IS NOT NULL THEN
+  INSERT INTO private.account_access(user_id) SELECT id FROM public.profiles WHERE email LIKE 'foundation-%@example.invalid';
+  INSERT INTO private.people(user_id,first_name,last_name,email,phone,birth_date,consent_at,consent_by,consent_version)
+   SELECT id,'Foundation','Test',email,'11999999999','1990-01-01',now(),id,'test-only' FROM public.profiles WHERE email LIKE 'foundation-%@example.invalid';
+ END IF;
+END $$;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',true);
 INSERT INTO public.lt_projects(id,name,color,emoji,created_by) VALUES

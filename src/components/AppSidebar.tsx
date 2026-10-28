@@ -156,9 +156,9 @@ export function AppSidebar({ page, onNavigate, isAdmin }: Props) {
         </SidebarGroup>
         <SidebarSeparator />
 
-        {isAdmin && (
+        {(
           <SidebarGroup>
-            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroupLabel>Pessoas</SidebarGroupLabel>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -166,10 +166,10 @@ export function AppSidebar({ page, onNavigate, isAdmin }: Props) {
                   onClick={() => { onNavigate("users"); setActiveProjectId(null) }}
                 >
                   <Users />
-                  <span>Usuários</span>
+                  <span>Pessoas e usuários</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
+              {isAdmin && <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={page === "settings"}
                   onClick={() => { onNavigate("settings"); setActiveProjectId(null) }}
@@ -177,7 +177,7 @@ export function AppSidebar({ page, onNavigate, isAdmin }: Props) {
                   <Settings />
                   <span>Configurações</span>
                 </SidebarMenuButton>
-              </SidebarMenuItem>
+              </SidebarMenuItem>}
             </SidebarMenu>
           </SidebarGroup>
         )}

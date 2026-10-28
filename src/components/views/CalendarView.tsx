@@ -1,4 +1,6 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { peopleApi, type Person } from "@/lib/people"
+import { birthdayFallsOn } from "@/lib/birthdays"
 import { useApp } from "@/context/AppContext"
 import type { Task } from "@/types/task"
 import { STATUS_CONFIG } from "@/types/task"
@@ -22,6 +24,14 @@ export function CalendarView({ onOpenTask }: CalendarViewProps) {
   const { tasks, projects, notes, activeProjectId } = useApp()
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [filesTask, setFilesTask] = useState<Task | null>(null)
+  const [birthdays, setBirthdays] = useState<Person[]>([])
+  const [birthdayError, setBirthdayError] = useState(false)
+  useEffect(() => {
+    let active = true
+    const load = () => { void peopleApi<Person[]>("directory").then(rows => { if (active) { setBirthdays(rows); setBirthdayError(false) } }).catch(() => { if (active) { setBirthdays([]); setBirthdayError(true) } }) }
+    load(); window.addEventListener('focus', load)
+    return () => { active = false; window.removeEventListener('focus', load) }
+  }, [])
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -43,6 +53,7 @@ export function CalendarView({ onOpenTask }: CalendarViewProps) {
   return (
     <>
       <div className="flex flex-col gap-4 h-full">
+        {birthdayError && <p role="alert" className="text-sm text-destructive">Não foi possível carregar os aniversários. Atualize a página para tentar novamente.</p>}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold capitalize">
             {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
@@ -94,6 +105,7 @@ export function CalendarView({ onOpenTask }: CalendarViewProps) {
 
                   {/* Tasks — scrollable, all shown */}
                   <div className="flex-1 overflow-y-auto px-1 pb-1 flex flex-col gap-0.5">
+                    {birthdays.filter(p => birthdayFallsOn(p.birthdayMonth,p.birthdayDay,day)).map(p => <div key={`birthday-${p.id}`} className="rounded bg-amber-100 text-amber-950 px-1.5 py-1 text-xs" title={`Aniversário de ${p.firstName} ${p.lastName}`}>🎂 {p.firstName} {p.lastName.split(' ')[0]}</div>)}
                     {dayTasks.slice(0, 2).map(task => {
                       const status = STATUS_CONFIG[task.status]
                       const hasNote = notes.some(n => n.taskId === task.id)

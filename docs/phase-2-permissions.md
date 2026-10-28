@@ -1,38 +1,74 @@
-# Fase 2 — proposta de permissões
+# Pessoas, ministérios e permissões — decisões de 28/10/2026
 
-Proposta para revisão; estas permissões ainda não foram implementadas. Base: PDF Documentacao_Promessa_Industrial_Gestao_de_Projetos e decisões posteriores do responsável. Uma única igreja, pessoas separadas das contas de acesso e vínculo com múltiplos ministérios.
+Implementação baseada nas respostas do responsável. Cadastro público permanece desativado. Pessoas podem existir sem conta de login e ter múltiplos vínculos e funções.
 
-| Recurso / ação | Administrador global | Líder | Membro |
-|---|---|---|---|
-| Criar/editar/desativar ministérios | Sim | Não | Não |
-| Nomear/remover líderes e conceder permissões | Sim | Não | Não |
-| Criar contas, redefinir acesso e desativar contas | Sim | Não | Não |
-| Consultar cadastro central de pessoas | Sim | Somente pessoas vinculadas ao próprio ministério, campos autorizados | Próprio cadastro |
-| Cadastrar/editar dados centrais de pessoas | Sim | Solicitar alteração ao administrador | Solicitar correção dos próprios dados |
-| Vincular pessoa já cadastrada ao ministério | Sim | Se houver permissão explícita, apenas no próprio ministério | Não |
-| Desvincular pessoa do ministério | Sim | Se houver permissão explícita, apenas no próprio ministério | Não |
-| Eventos, escalas e recursos do ministério | Todas as ações autorizadas | Ações concedidas no próprio ministério | Consultar os itens publicados para si |
-| Projetos/tarefas atuais | Preservar regras existentes | Preservar regras existentes | Preservar regras existentes |
-| Notas privadas | Somente próprias | Somente próprias | Somente próprias |
-| Consultar auditoria | Sim | Apenas eventos permitidos do próprio ministério | Não |
-| Excluir definitivamente pessoa ou histórico | Fora do fluxo comum; decisão específica | Não | Não |
+## Cadastro e consentimento
 
-## Regras de implementação
+- Nome, sobrenome, telefone, nascimento e email são obrigatórios para ativar o cadastro.
+- Somente administrador cria uma pessoa ou conta. Pode cadastrar os dados completos ou criar um convite com email e senha temporária para a própria pessoa preencher o restante.
+- O convite não envia email automaticamente. O administrador repassa as instruções e a senha temporária à pessoa.
+- O administrador pode registrar autorização já obtida. Caso contrário, o primeiro acesso exige a aprovação pessoal do aviso. Convite sem aprovação é uma conta pendente: não aparece no diretório e não acessa módulos do sistema.
+- As contas existentes não recebem aprovação automática. Devem completar os dados e aprovar o aviso no próximo acesso.
+- Troca de senha temporária obrigatória antes do acesso, verificada no banco por alteração real da senha no Supabase Auth. O cliente não pode marcar a troca como concluída.
+- Nome e sobrenome são visíveis para usuários autenticados com cadastro ativo. Contatos são visíveis para a própria pessoa, administradores e líderes dos ministérios aos quais ela pertence. Ano e data completa de nascimento apenas para a própria pessoa e administradores.
+- Dia e mês alimentam aniversários anuais no calendário geral. Nenhuma idade é publicada. Aniversário de 29/02 é lembrado em 28/02 nos anos não bissextos.
 
-- Negar acesso por padrão. Verificar recurso, ação, ministério e vínculo ativo no backend, inclusive em chamadas diretas.
-- Ser líder em um ministério não concede acesso a outro. Permissões configuráveis, sem nomes de ministérios fixados no código.
-- Pessoa pode existir sem login. Desativar vínculo ou conta preserva histórico e revoga acesso; não apaga a pessoa.
-- Cadastro de contas exclusivamente administrativo. Senha temporária exige troca antes de acessar dados, imposta pelo backend; nunca gravar senha em tabelas do aplicativo ou logs.
-- Guardar nome completo; exibir primeiro nome e primeiro sobrenome.
-- Dados pessoais não devem se tornar um diretório geral para membros. Definir campos visíveis por papel antes da migration.
-- Toda alteração administrativa deve registrar autor, ação, entidade e data, sem segredos.
+## Administração
 
-## Decisões para fechar antes de desenvolver
+| Ação | Administrador geral | Outro administrador | Líder | Membro |
+|---|---|---|---|---|
+| Criar pessoa ou convidar usuário | Sim | Sim | Não | Não |
+| Editar cadastro central | Sim | Sim | Solicitar correção | Solicitar própria correção |
+| Conceder administração global | Sim | Não | Não | Não |
+| Ativar/desativar contas comuns | Sim | Sim | Não | Não |
+| Alterar contas dos administradores gerais | Protegidas no fluxo comum | Não | Não | Não |
+| Redefinir senha de outra conta comum | Sim | Sim | Não | Não |
+| Redefinir senha de outro administrador geral | Sim | Não | Não | Não |
+| Nomear líder e conceder permissões ministeriais | Sim | Sim | Não | Não |
+| Adicionar vínculo ministerial | Sim | Sim | Com permissão, no próprio ministério | Não |
+| Alterar funções | Sim | Sim | Com permissão, apenas vínculos que adicionou | Não |
+| Desativar vínculo ministerial | Sim | Sim | Com permissão, apenas vínculos que adicionou | Não |
+| Consultar auditoria | Sim | Sim | Não | Não |
+| Autorizar futura exclusão definitiva | Somente as duas contas designadas | Não | Não | Não |
+| Notas privadas | Somente próprias | Somente próprias | Somente próprias | Somente próprias |
 
-1. Aprovar ou ajustar a proposta de que líderes solicitem alterações no cadastro central, mas possam administrar vínculos mediante permissão.
-2. Definir campos obrigatórios e sensíveis do cadastro, incluindo membro/visitante, telefone e data de nascimento.
-3. Definir retenção da auditoria e quem autoriza exclusões definitivas.
+Administradores gerais designados: denisson2010@hotmail.com e promessistasind@gmail.com. Os IDs dessas contas foram verificados; mudar um email de perfil não concede essa autoridade. Não há exclusão definitiva de pessoas/contas exposta nesta entrega: desativação preserva histórico. Uma futura operação de exclusão exige autorização desses administradores e avaliação das dependências, sem cascata indiscriminada.
 
-## Validação prevista
+A página Pessoas e usuários tem Diretório e Administração. O diretório segue a visibilidade aprovada; a área administrativa do líder só retorna os vínculos que ele adicionou aos ministérios que lidera. Função operacional não concede liderança automaticamente. Cada vínculo tem controles separados para liderança, adicionar membros, alterar funções e desativar vínculos.
 
-Testes de isolamento entre ministérios, líder sem concessão, membro, pessoa sem login, conta desativada, múltiplos vínculos e troca obrigatória de senha. Verificar também que notas privadas e regras atuais de projetos não mudaram. Publicar uma vez após concluir e testar a etapa.
+Redefinir senha é uma ação, não uma permissão persistente: abre confirmação, volta para desligado após sucesso/cancelamento e não indica sucesso em caso de falha. Sessões anteriores são revogadas e o usuário precisa entrar e trocar a senha. Redefinições concorrentes são bloqueadas. Após falha externa, a conta permanece bloqueada e o administrador pode repetir depois de cinco minutos.
+
+## Catálogo inicial
+
+| Ministério | Funções |
+|---|---|
+| Ministério de Celebração | baterista, baixista, vocalista, ministrante, guitarrista, violonista, tecladista, operador de som |
+| Ministério de Comunicação | operador de projeção, fotografia, filmagem, operador de iluminação, operador de live, media social, operador de som |
+| Ministério de Ensino | Mensageiro, Professor |
+| Ministério de mulheres | Colaboradora |
+| Ministério de Homens | Colaborador |
+| Junta Diaconal | Recepção, Limpeza, Auxiliar de ceia |
+| Ministério de Crianças e adolescentes | Professor, Professora, Auxiliar de sala |
+| Ministério de Proclamação | Colaborador |
+| Ministério de Jovens | Professor, Professora, Auxiliar de sala, Colaborador |
+| Ministério de Recepção | Recepção |
+| Ministério de Intercessão | Intercessor, Colaborador |
+| Pastor | Titular, Auxiliar |
+
+Total: 12 ministérios e 35 funções. Uma pessoa pode ter várias funções por ministério. Não há vínculos nem líderes atribuídos automaticamente aos usuários existentes.
+
+## Segurança, testes e recuperação
+
+- Dados pessoais em schema privado com RLS; RPCs expõem somente os campos autorizados. Email removido dos privilégios de leitura direta de profiles.
+- Restrições adicionais bloqueiam tarefas, projetos, notas, arquivos e convites antes de consentimento/troca obrigatória ou após desativação, sem substituir as regras anteriores de propriedade.
+- Auditoria sem expiração automática, com autor, ação, alvo e instante; nunca registra senhas. Consulta paginada em 100 itens.
+- Testes SQL: isolamento por ministério e autor do vínculo, campos privados, consentimento, senha, sessão antiga, revogação, tentativa de auto-promoção, provisionamento e redefinições concorrentes. Executar people_ministries.sql dentro de BEGIN/ROLLBACK.
+- Testes anteriores de projetos, convites, notas e recorrência continuam executáveis com fixtures adaptadas ao novo bloqueio.
+- Testes de navegador: primeiro acesso sem consultas aos módulos, aceite explícito, convite, funções múltiplas, controle de redefinição, calendário e tela restrita do líder; testes de aniversário incluem 29/02.
+- Backup privado anterior à migration em ../backups/app-iap-before-phase2.json, fora do repositório. SHA-256: 63d6258c2812156d083dec7c00c4df227f0652afe3b4c1885541ba5c699476d5. Inclui dados públicos, funções, políticas, privilégios e versões anteriores das duas Edge Functions. Arquivo relido e estrutura/contagens verificadas.
+- A migration não apaga registros existentes. A alteração do nome exibido preserva responsáveis de tarefas que ainda usam nome como referência; homônimos ambíguos interrompem a mudança para revisão administrativa.
+- Preferir correção para frente. Não reaplicar o rollback antigo da fundação após esta etapa: ele não conhece consentimento, privacidade de contatos nem bloqueio de senha. Uma reversão exige preservar as novas tabelas e manter os bloqueios de privacidade.
+
+## Limites desta etapa
+
+O catálogo inicial está fixado pela migration, não há editor de ministérios nesta entrega. Eventos, escalas e recursos ministeriais ainda não foram construídos. O diretório carrega os registros aprovados; paginação do diretório fica para crescimento de volume. A regra de nomes legada nas tarefas será substituída por IDs em uma evolução própria. Os erros de lint anteriores e o aviso de tamanho do bundle permanecem fora deste escopo.

@@ -18,7 +18,7 @@ export function useMembersStore() {
   async function fetchMembers() {
     setLoading(true)
     try {
-      const { data } = await supabase.from("profiles").select("*").order("created_at")
+      const { data } = await supabase.from("profiles").select("id,name,color,initials,created_at").order("created_at")
       setMembers((data ?? []).map(mapMember))
     } finally {
       setLoading(false)

@@ -10,6 +10,7 @@ import { ProjectsPage } from "@/pages/ProjectsPage"
 import { NotesPage } from "@/pages/NotesPage"
 import { CalendarPage } from "@/pages/CalendarPage"
 import { UsersPage } from "@/pages/UsersPage"
+import { AccountOnboarding } from "@/components/AccountOnboarding"
 import { SettingsPage } from "@/pages/SettingsPage"
 import { JarvisPanel } from "@/components/jarvis/JarvisPanel"
 import { TaskDetailSheet } from "@/components/TaskDetailSheet"
@@ -67,7 +68,7 @@ function UserMenu() {
   )
 }
 
-const ADMIN_ONLY_PAGES: Page[] = ["users", "settings"]
+const ADMIN_ONLY_PAGES: Page[] = ["settings"]
 
 function AppInner() {
   const { loading, saving, setActiveProjectId, tasks, loadError, reloadTasks } = useApp()
@@ -182,7 +183,7 @@ function AppInner() {
 }
 
 function AuthGate() {
-  const { session, loading } = useAuth()
+  const { session, loading, access, accessError, refreshAccess, signOut } = useAuth()
 
   if (loading) {
     return (
@@ -193,6 +194,9 @@ function AuthGate() {
   }
 
   if (!session) return <LoginPage />
+  if (accessError) return <main className="p-8 space-y-4"><p role="alert">Não foi possível validar seu acesso: {accessError}</p><Button onClick={refreshAccess}>Tentar novamente</Button><Button variant="outline" onClick={signOut}>Sair</Button></main>
+  if (!access) return <main className="p-8">Verificando acesso…</main>
+  if (!access.ready) return <AccountOnboarding key={`${session.user.id}-${access.passwordRequired}-${access.consented}`} status={access} />
 
   return (
     <AppProvider key={session.user.id}>

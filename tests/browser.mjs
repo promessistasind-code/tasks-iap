@@ -39,6 +39,7 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
   const body = request.postDataJSON()
   const answer = (value, status=200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(value), headers: { 'access-control-allow-origin': '*' } })
   if (url.pathname.includes('/auth/')) return answer(url.pathname.endsWith('/user') ? user : {})
+  if (table === 'people_portal') return answer(body.op === 'status' ? { ready: true, consented: true, passwordRequired: false, isAdmin: true, isGeneralAdmin: true, isLeader: false, email: user.email, firstName: 'Test', lastName: 'Owner', phone: '11999999999', birthDate: '1990-01-01' } : [])
   if (table === 'profiles') return answer(single ? profile : [profile])
   if (table === 'lt_projects') return answer([project])
   if (table === 'lt_notifications' || table === 'lt_notes' || table === 'lt_project_members' || table === 'lt_project_files') return answer([])
@@ -130,7 +131,7 @@ try {
   tasks=[structuredClone(initialTask)]
   await page.goto(origin)
   await page.waitForFunction(()=>document.body.innerText.includes('Promessa Industrial'))
-  for(const name of ['Tarefas','Projetos','Notas','Calendário','Dashboard','Usuários','Configurações']) {
+  for(const name of ['Tarefas','Projetos','Notas','Calendário','Dashboard','Pessoas e usuários','Configurações']) {
     await page.getByRole('button',{name:new RegExp('^'+name+'(?:\\s|$)')}).first().click()
     await page.waitForTimeout(150)
     assert.ok(!(await page.locator('body').innerText()).includes('Cannot read'))

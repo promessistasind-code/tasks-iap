@@ -1,209 +1,48 @@
-import { useState, useEffect } from "react"
-import { addDays, addWeeks, addMonths, format, parseISO } from "date-fns"
+import { useState, useRef, useEffect } from "react"
 import { toast } from "sonner"
-import type { Task, Project, Status, Comment, ChecklistItem, ActivityEntry, Recurring, TaskLink } from "@/types/task"
+import type { Task, Status, ActivityEntry } from "@/types/task"
 import { supabase } from "@/lib/supabase"
-
-// Evita que uma chamada de rede travada (ex: sessão presa) prenda a UI pra
-// sempre sem nenhum feedback — depois do tempo limite, vira erro em vez de
-// ficar esperando indefinidamente.
-function withTimeout<T>(promise: PromiseLike<T>, ms = 10000): Promise<T> {
-  return Promise.race([
-    Promise.resolve(promise),
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
-  ])
-}
-
-// ── Mappers DB → App ──────────────────────────────────────────────────────────
-
-function mapProject(row: Record<string, unknown>): Project {
-  return {
-    id: row.id as string,
-    name: row.name as string,
-    color: row.color as string,
-    emoji: row.emoji as string,
-    suspended: !!row.suspended,
-    createdBy: (row.created_by as string) ?? null,
-  }
-}
-
-function mapTask(
-  row: Record<string, unknown>,
-  comments: Comment[],
-  checklist: ChecklistItem[],
-  activity: ActivityEntry[],
-  links: TaskLink[],
-): Task {
-  return {
-    id: row.id as string,
-    title: row.title as string,
-    description: (row.description as string) ?? "",
-    status: row.status as Status,
-    priority: row.priority as Task["priority"],
-    projectId: (row.project_id as string) ?? "",
-    dueDate: row.due_date ? (row.due_date as string) : null,
-    tags: (row.tags as string[]) ?? [],
-    recurring: (row.recurring as Recurring) ?? null,
-    position: (row.position as number) ?? 0,
-    createdAt: row.created_at as string,
-    comments,
-    checklist,
-    activity,
-    links,
-    assignee: (row.assignee as string) ?? null,
-  }
-}
-
-function mapComment(row: Record<string, unknown>): Comment {
-  return {
-    id: row.id as string,
-    text: row.text as string,
-    authorId: (row.author_id as string) ?? null,
-    createdAt: row.created_at as string,
-  }
-}
-
-function mapChecklist(row: Record<string, unknown>): ChecklistItem {
-  return { id: row.id as string, text: row.text as string, done: row.done as boolean }
-}
-
-function mapActivity(row: Record<string, unknown>): ActivityEntry {
-  return { id: row.id as string, text: row.text as string, createdAt: row.created_at as string }
-}
-
-function mapTaskLink(row: Record<string, unknown>): TaskLink {
-  return { id: row.id as string, title: row.title as string, url: row.url as string }
-}
-
-// ── Recurring helper ──────────────────────────────────────────────────────────
-
-function nextRecurringDate(dateStr: string, recurring: NonNullable<Recurring>): string {
-  const d = parseISO(dateStr)
-  const next = recurring === "daily" ? addDays(d, 1)
-    : recurring === "weekly" ? addWeeks(d, 1)
-    : recurring === "biweekly" ? addWeeks(d, 2)
-    : addMonths(d, 1)
-  return format(next, "yyyy-MM-dd")
-}
-
-// ── Store ─────────────────────────────────────────────────────────────────────
+import { withTimeout } from "@/lib/async"
+import { mapTask, mapComment, mapActivity, mapChecklist, mapTaskLink } from "./tasks/mappers"
+import { useTaskData } from "./tasks/useTaskData"
+import { useProjectActions } from "./tasks/useProjectActions"
+import { upsertById } from "./tasks/state"
 
 export function useTaskStore() {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const { tasks, setTasks, projects, setProjects, loading, loadError, reload } = useTaskData()
+  const [pendingWrites, setPendingWrites] = useState(0)
+  const saving = pendingWrites > 0
+  const moveLocks = useRef(new Set<string>())
+  const deleteTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const [pendingDeletes, setPendingDeletes] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    const timers = deleteTimers.current
+    return () => { timers.forEach(clearTimeout); timers.clear() }
+  }, [])
+  function setSaving(value: boolean) {
+    setPendingWrites(count => Math.max(0, count + (value ? 1 : -1)))
+    if (!value) void reload()
+  }
 
   // ── Reorder ────────────────────────────────────────────────────────────────
 
   async function reorderTasks(orderedIds: string[]) {
+    const ids = Array.from(new Set(orderedIds)).filter(id => tasks.some(t => t.id === id))
+    try {
+      setSaving(true)
     setTasks(prev => {
       const byId = Object.fromEntries(prev.map(t => [t.id, t]))
-      const reordered = orderedIds.map((id, i) => ({ ...byId[id], position: i }))
+      const reordered = Array.from(new Set(orderedIds)).filter(id => byId[id]).map((id, i) => ({ ...byId[id], position: i }))
       const rest = prev.filter(t => !orderedIds.includes(t.id))
       return [...reordered, ...rest]
     })
     // Batch update positions in Supabase
     await Promise.all(
-      orderedIds.map((id, i) => supabase.from("lt_tasks").update({ position: i }).eq("id", id))
+      ids.map((id, i) => supabase.from("lt_tasks").update({ position: i }).eq("id", id).select('id').single().throwOnError())
     )
+    } catch { toast.error('Erro ao ordenar tarefas'); void reload() }
+    finally { setSaving(false) }
   }
-
-  // Load all data on mount
-  useEffect(() => {
-    async function loadAll() {
-      try {
-        const [
-          { data: projRows },
-          { data: taskRows },
-          { data: commentRows },
-          { data: checklistRows },
-          { data: activityRows },
-          { data: linkRows },
-        ] = await Promise.all([
-          supabase.from("lt_projects").select("*").order("created_at"),
-          supabase.from("lt_tasks").select("*").order("created_at", { ascending: false }),
-          supabase.from("lt_task_comments").select("*").order("created_at"),
-          supabase.from("lt_task_checklist").select("*").order("position").order("created_at"),
-          supabase.from("lt_task_activity").select("*").order("created_at"),
-          supabase.from("lt_task_links").select("*").order("created_at"),
-        ])
-
-        setProjects((projRows ?? []).map(mapProject))
-
-        const commentsByTask: Record<string, Comment[]> = {}
-        const checklistByTask: Record<string, ChecklistItem[]> = {}
-        const activityByTask: Record<string, ActivityEntry[]> = {}
-        const linksByTask: Record<string, TaskLink[]> = {}
-
-        for (const r of commentRows ?? []) {
-          const tid = r.task_id as string
-          if (!commentsByTask[tid]) commentsByTask[tid] = []
-          commentsByTask[tid].push(mapComment(r))
-        }
-        for (const r of checklistRows ?? []) {
-          const tid = r.task_id as string
-          if (!checklistByTask[tid]) checklistByTask[tid] = []
-          checklistByTask[tid].push(mapChecklist(r))
-        }
-        for (const r of activityRows ?? []) {
-          const tid = r.task_id as string
-          if (!activityByTask[tid]) activityByTask[tid] = []
-          activityByTask[tid].push(mapActivity(r))
-        }
-        for (const r of linkRows ?? []) {
-          const tid = r.task_id as string
-          if (!linksByTask[tid]) linksByTask[tid] = []
-          linksByTask[tid].push(mapTaskLink(r))
-        }
-
-        const mappedTasks = (taskRows ?? [])
-          .sort((a, b) => ((a.position as number) ?? 0) - ((b.position as number) ?? 0))
-          .map(r => mapTask(r, commentsByTask[r.id as string] ?? [], checklistByTask[r.id as string] ?? [], activityByTask[r.id as string] ?? [], linksByTask[r.id as string] ?? []))
-        setTasks(mappedTasks)
-
-        // Subscribe to realtime changes
-        const taskSubscription = supabase
-          .channel('lt_tasks_changes')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'lt_tasks' }, (payload) => {
-            if (payload.eventType === 'UPDATE') {
-              setTasks(prev => prev.map(t => t.id === payload.new.id ? mapTask(payload.new, commentsByTask[payload.new.id] ?? [], checklistByTask[payload.new.id] ?? [], activityByTask[payload.new.id] ?? [], linksByTask[payload.new.id] ?? []) : t))
-            } else if (payload.eventType === 'INSERT') {
-              const newTask = mapTask(payload.new, [], [], [], [])
-              setTasks(prev => [newTask, ...prev])
-            } else if (payload.eventType === 'DELETE') {
-              setTasks(prev => prev.filter(t => t.id !== payload.old.id))
-            }
-          })
-          .subscribe()
-
-        // Chat por tarefa — comentários chegam ao vivo pra todo mundo com a tarefa aberta
-        const commentSubscription = supabase
-          .channel('lt_task_comments_changes')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'lt_task_comments' }, (payload) => {
-            if (payload.eventType === 'INSERT') {
-              const comment = mapComment(payload.new)
-              setTasks(prev => prev.map(t => t.id !== payload.new.task_id
-                ? t
-                : { ...t, comments: t.comments.some(c => c.id === comment.id) ? t.comments : [...t.comments, comment] }))
-            } else if (payload.eventType === 'DELETE') {
-              setTasks(prev => prev.map(t => t.id !== payload.old.task_id
-                ? t
-                : { ...t, comments: t.comments.filter(c => c.id !== payload.old.id) }))
-            }
-          })
-          .subscribe()
-
-        return () => {
-          taskSubscription.unsubscribe()
-          commentSubscription.unsubscribe()
-        }
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadAll()
-  }, [])
 
   // ── Tasks ──────────────────────────────────────────────────────────────────
 
@@ -231,7 +70,7 @@ export function useTaskStore() {
       // Insert initial activity
       const { data: actRow } = await supabase.from("lt_task_activity").insert({ task_id: data.id, text: "Tarefa criada" }).select().single()
       const newTask = mapTask(data, [], [], actRow ? [mapActivity(actRow)] : [], [])
-      setTasks(prev => [newTask, ...prev])
+      setTasks(prev => upsertById(prev, newTask))
       return newTask
     } catch {
       toast.error("Demorou demais pra criar a tarefa — tenta de novo")
@@ -256,7 +95,7 @@ export function useTaskStore() {
       if (patch.assignee !== undefined) dbPatch.assignee = patch.assignee || null
 
       if (Object.keys(dbPatch).length > 0) {
-        const { error } = await withTimeout(supabase.from("lt_tasks").update(dbPatch).eq("id", id))
+        const { error } = await withTimeout(supabase.from("lt_tasks").update(dbPatch).eq("id", id).select("id").single())
         if (error) {
           toast.error("Erro ao atualizar tarefa")
           return false
@@ -268,7 +107,7 @@ export function useTaskStore() {
         const { data, error } = await supabase.from("lt_task_activity").insert({ task_id: id, text: activityText }).select().single()
         if (error) {
           toast.error("Erro ao registrar atividade")
-          return false
+          void reload()
         }
         if (data) newActivityEntry = mapActivity(data)
       }
@@ -289,52 +128,34 @@ export function useTaskStore() {
   }
 
   async function deleteTask(id: string) {
-    const taskToDelete = tasks.find(t => t.id === id)
-    if (!taskToDelete) return
-
-    try {
-      setSaving(true)
-      // Remove from UI immediately
-      setTasks(prev => prev.filter(t => t.id !== id))
-
-      // Show toast with undo option
-      let undone = false
-      toast.success("Tarefa excluída", {
-        description: "Desfazer",
-        action: {
-          label: "Desfazer",
-          onClick: () => {
-            undone = true
-            setTasks(prev => [taskToDelete, ...prev])
-          },
-        },
-        duration: 5000,
-        onDismiss: async () => {
-          if (!undone) {
-            // Perform actual deletion after 5 seconds
-            try {
-              const { error } = await withTimeout(supabase.from("lt_tasks").delete().eq("id", id))
-              if (error) toast.error("Erro ao excluir tarefa")
-            } catch {
-              toast.error("Demorou demais pra excluir — a tarefa pode ter voltado, confere")
-            }
-          }
-        },
-      })
-    } finally {
-      setSaving(false)
-    }
+    if (deleteTimers.current.has(id)) return
+    setPendingDeletes(prev => new Set(prev).add(id))
+    const restore = () => setPendingDeletes(prev => { const next = new Set(prev); next.delete(id); return next })
+    const timer = setTimeout(async () => {
+      deleteTimers.current.delete(id)
+      await deleteTasks([id])
+      restore()
+    }, 5000)
+    deleteTimers.current.set(id, timer)
+    toast.success('Tarefa excluída', { duration: 5000, action: { label: 'Desfazer', onClick: () => {
+      if (!deleteTimers.current.has(id)) return
+      clearTimeout(timer)
+      deleteTimers.current.delete(id)
+      restore()
+    } } })
   }
 
   async function deleteTasks(ids: string[]): Promise<boolean> {
     try {
       setSaving(true)
-      const { error } = await withTimeout(supabase.from("lt_tasks").delete().in("id", ids))
+      const { data, error } = await withTimeout(supabase.from("lt_tasks").delete().in("id", ids).select('id'))
       if (error) {
         toast.error("Erro ao excluir tarefas")
         return false
       }
-      setTasks(prev => prev.filter(t => !ids.includes(t.id)))
+      const removed = new Set((data ?? []).map(row => row.id))
+      setTasks(prev => prev.filter(t => !removed.has(t.id)))
+      if (removed.size !== new Set(ids).size) { toast.error('Algumas tarefas não puderam ser excluídas'); return false }
       return true
     } catch {
       toast.error("Demorou demais pra excluir — tenta de novo")
@@ -368,52 +189,14 @@ export function useTaskStore() {
   }
 
   async function moveTask(id: string, status: Status): Promise<boolean> {
+    if (moveLocks.current.has(id)) return false
+    moveLocks.current.add(id)
     try {
-      setSaving(true)
-      const LABELS: Record<Status, string> = { todo: "A Fazer", "in-progress": "Em Andamento", review: "Revisão", done: "Concluído" }
-      const { error } = await withTimeout(supabase.from("lt_tasks").update({ status }).eq("id", id))
-      if (error) {
-        toast.error("Erro ao atualizar status")
-        return false
-      }
-
-      const { data: actRow } = await supabase.from("lt_task_activity").insert({ task_id: id, text: `Status alterado para ${LABELS[status]}` }).select().single()
-      const entry = actRow ? mapActivity(actRow) : undefined
-
-      setTasks(prev => {
-        const updated = prev.map(t => {
-          if (t.id !== id) return t
-          return { ...t, status, activity: [...(t.activity ?? []), ...(entry ? [entry] : [])] }
-        })
-
-        // Recurring: regenerate on completion
-        if (status === "done") {
-          const task = prev.find(t => t.id === id)
-          if (task?.recurring && task.dueDate) {
-            const nextDue = nextRecurringDate(task.dueDate, task.recurring)
-            // Insert new task async
-            supabase.from("lt_tasks").insert({
-              title: task.title, description: task.description, status: "todo",
-              priority: task.priority, project_id: task.projectId || null,
-              due_date: nextDue, tags: task.tags, recurring: task.recurring,
-            }).select().single().then(({ data }) => {
-              if (!data) return
-              supabase.from("lt_task_activity").insert({ task_id: data.id, text: "Recorrência gerada automaticamente" }).select().single().then(({ data: actR }) => {
-                const resetChecklist = task.checklist.map(i => ({ ...i, id: crypto.randomUUID(), done: false }))
-                const newTask = mapTask(data, [], resetChecklist, actR ? [mapActivity(actR)] : [], [])
-                setTasks(p => [newTask, ...p])
-              })
-            })
-          }
-        }
-        return updated
-      })
-      return true
-    } catch {
-      toast.error("Demorou demais pra atualizar status — tenta de novo")
-      return false
+      // Recurrence, checklist copying and deduplication happen in one DB transaction.
+      return await updateTask(id, { status }, 'Status alterado para ' + status)
     } finally {
-      setSaving(false)
+      moveLocks.current.delete(id)
+      void reload()
     }
   }
 
@@ -541,85 +324,24 @@ export function useTaskStore() {
   }
 
   async function reorderChecklist(taskId: string, orderedIds: string[]) {
+    const ids = Array.from(new Set(orderedIds))
+    try {
+      setSaving(true)
     setTasks(prev => prev.map(t => {
       if (t.id !== taskId) return t
       const byId = Object.fromEntries(t.checklist.map(i => [i.id, i]))
-      return { ...t, checklist: orderedIds.map(id => byId[id]) }
+      return { ...t, checklist: Array.from(new Set(orderedIds)).filter(id => byId[id]).map(id => byId[id]) }
     }))
     await Promise.all(
-      orderedIds.map((id, i) => supabase.from("lt_task_checklist").update({ position: i }).eq("id", id))
+      ids.map((id, i) => supabase.from("lt_task_checklist").update({ position: i }).eq("id", id).eq("task_id", taskId).select('id').single().throwOnError())
     )
+    } catch { toast.error('Erro ao ordenar checklist'); void reload() }
+    finally { setSaving(false) }
   }
 
   // ── Projects ───────────────────────────────────────────────────────────────
 
-  async function addProject(projectData: Omit<Project, "id" | "createdBy" | "suspended">) {
-    try {
-      setSaving(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      const { data, error } = await withTimeout(supabase.from("lt_projects").insert({
-        name: projectData.name, color: projectData.color, emoji: projectData.emoji,
-        created_by: user?.id ?? null,
-      }).select().single())
-      if (error || !data) {
-        toast.error("Erro ao criar projeto")
-        return
-      }
-      if (user) {
-        await supabase.from("lt_project_members").insert({ project_id: data.id, user_id: user.id, role: "owner" })
-      }
-      const p = mapProject(data)
-      setProjects(prev => [...prev, p])
-      return p
-    } catch {
-      toast.error("Demorou demais pra criar o projeto — tenta de novo")
-      return undefined
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function updateProject(id: string, patch: Partial<Project>): Promise<boolean> {
-    try {
-      setSaving(true)
-      const dbPatch: Record<string, unknown> = {}
-      if (patch.name !== undefined) dbPatch.name = patch.name
-      if (patch.color !== undefined) dbPatch.color = patch.color
-      if (patch.emoji !== undefined) dbPatch.emoji = patch.emoji
-      if (patch.suspended !== undefined) dbPatch.suspended = patch.suspended
-      const { error } = await withTimeout(supabase.from("lt_projects").update(dbPatch).eq("id", id))
-      if (error) {
-        toast.error(patch.suspended !== undefined ? "Só administradores podem suspender/reativar um projeto" : "Erro ao atualizar projeto")
-        return false
-      }
-      setProjects(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))
-      return true
-    } catch {
-      toast.error("Demorou demais pra atualizar o projeto — tenta de novo")
-      return false
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function deleteProject(id: string): Promise<boolean> {
-    try {
-      setSaving(true)
-      const { error } = await withTimeout(supabase.from("lt_projects").delete().eq("id", id))
-      if (error) {
-        toast.error("Erro ao excluir projeto")
-        return false
-      }
-      setProjects(prev => prev.filter(p => p.id !== id))
-      setTasks(prev => prev.filter(t => t.projectId !== id))
-      return true
-    } catch {
-      toast.error("Demorou demais pra excluir — tenta de novo")
-      return false
-    } finally {
-      setSaving(false)
-    }
-  }
+  const { addProject, updateProject, deleteProject } = useProjectActions({setSaving,setProjects,setTasks})
 
   // ── Task Links ─────────────────────────────────────────────────────────────
 
@@ -699,12 +421,18 @@ export function useTaskStore() {
         position: task.checklist.indexOf(item),
       }))
 
+      let checklist: Task['checklist'] = []
       if (resetChecklist.length > 0) {
-        await supabase.from("lt_task_checklist").insert(resetChecklist)
+        const { data: rows, error: checklistError } = await withTimeout(supabase.from("lt_task_checklist").insert(resetChecklist).select())
+        if (checklistError) {
+          await supabase.from("lt_tasks").delete().eq("id", data.id)
+          throw checklistError
+        }
+        checklist = (rows ?? []).map(mapChecklist)
       }
 
-      const newTask = mapTask(data, [], task.checklist.map((item) => ({ ...item, done: false })), actRow ? [mapActivity(actRow)] : [], [])
-      setTasks(prev => [newTask, ...prev])
+      const newTask = mapTask(data, [], checklist, actRow ? [mapActivity(actRow)] : [], [])
+      setTasks(prev => upsertById(prev, newTask))
       return newTask
     } catch {
       toast.error("Demorou demais pra duplicar — tenta de novo")
@@ -715,7 +443,7 @@ export function useTaskStore() {
   }
 
   return {
-    tasks, projects, loading, saving,
+    tasks: tasks.filter(task => !pendingDeletes.has(task.id)), projects, loading, saving, loadError, reloadTasks: reload,
     reorderTasks,
     addTask, updateTask, deleteTask, deleteTasks, updateTasks, moveTask,
     addComment, deleteComment,

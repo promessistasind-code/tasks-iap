@@ -44,6 +44,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 const ALLOWED_NUMBER = Deno.env.get("WHATSAPP_ALLOWED_NUMBER") // ex: "5511999999999"
 const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET")
+// Explicit server-side binding; never accept a note owner from a webhook body.
+const NOTE_OWNER_ID = Deno.env.get("WHATSAPP_NOTE_OWNER_ID")
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
@@ -53,7 +55,10 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405 })
   }
 
-  // Verificar secret (opcional mas recomendado)
+  if (!WEBHOOK_SECRET || !ALLOWED_NUMBER || !NOTE_OWNER_ID) {
+    return new Response("Integration not configured", { status: 503 })
+  }
+  // A privileged webhook requires authentication and an explicit private owner.
   if (WEBHOOK_SECRET) {
     const secret = req.headers.get("x-webhook-secret") || req.headers.get("apikey")
     if (secret !== WEBHOOK_SECRET) {
@@ -91,7 +96,7 @@ Deno.serve(async (req) => {
         .replace("@g.us", "")
 
       // Verificar se é o número autorizado
-      if (ALLOWED_NUMBER && !senderNumber.includes(ALLOWED_NUMBER.replace(/\D/g, ""))) {
+      if (senderNumber !== ALLOWED_NUMBER.replace(/\D/g, "")) {
         continue
       }
 
@@ -117,6 +122,7 @@ Deno.serve(async (req) => {
 
       // Inserir nota no banco
       const { error } = await supabase.from("lt_notes").insert({
+        user_id: NOTE_OWNER_ID,
         title,
         content,
         tags,
@@ -129,7 +135,7 @@ Deno.serve(async (req) => {
         return new Response("Database error", { status: 500 })
       }
 
-      console.log(`Nota criada: "${title}" | tags: ${tags.join(",")}`)
+      console.log("Nota privada criada")
     }
 
     return new Response("OK", { status: 200 })

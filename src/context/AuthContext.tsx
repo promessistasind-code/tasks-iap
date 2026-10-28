@@ -31,24 +31,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  async function loadProfile(userId: string) {
-    const { data } = await supabase.from("profiles").select("*").eq("id", userId).single()
-    setProfile(data ? mapProfile(data) : null)
-  }
-
   useEffect(() => {
+    let active = true
+    let currentUserId: string | null = null
+    let profileTimer: ReturnType<typeof setTimeout> | undefined
+    async function loadProfile(userId: string) {
+      const { data } = await supabase.from("profiles").select("*").eq("id", userId).single()
+      if (active && currentUserId === userId) setProfile(data ? mapProfile(data) : null)
+    }
     let settled = false
     function finishLoading() {
-      if (!settled) { settled = true; setLoading(false) }
+      if (active && !settled) { settled = true; setLoading(false) }
     }
 
     async function init() {
-      const { data: { session: s } } = await supabase.auth.getSession()
-      setSession(s)
-      if (s) await loadProfile(s.user.id)
-      finishLoading()
+      try {
+        const { data: { session: s } } = await supabase.auth.getSession()
+        if (!active) return
+        currentUserId = s?.user.id ?? null
+        setSession(s)
+        if (s) await loadProfile(s.user.id)
+      } finally { finishLoading() }
     }
-    init()
+    void init().catch(() => {})
 
     // Blindagem: se a checagem inicial de sessão travar (ex: alguma chamada
     // de auth presa sem nunca resolver nem dar erro), não deixa o app preso
@@ -56,13 +61,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // o usuário só precisa logar de novo.
     const timeoutId = setTimeout(finishLoading, 8000)
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (!active) return
+      if (currentUserId !== (s?.user.id ?? null)) setProfile(null)
+      currentUserId = s?.user.id ?? null
       setSession(s)
-      if (s) await loadProfile(s.user.id)
+      clearTimeout(profileTimer)
+      // Do not await Supabase calls inside its auth callback: that can deadlock
+      // the auth lock used by the request's token lookup.
+      if (s) profileTimer = setTimeout(() => { void loadProfile(s.user.id) }, 0)
       else setProfile(null)
     })
 
     return () => {
+      active = false
+      clearTimeout(profileTimer)
       clearTimeout(timeoutId)
       sub.subscription.unsubscribe()
     }

@@ -1,5 +1,7 @@
 -- ============================================================================
 -- Tasks System — schema completo do Supabase
+-- BOOTSTRAP LEGADO: não aplicar isoladamente nem em produção.
+-- Em banco vazio, aplicar depois todas as migrations em ../migrations/.
 -- ============================================================================
 -- Gerado por introspecção direta do banco de produção (não é um dump genérico
 -- de template) — reflete exatamente as tabelas, RLS e funções que o app usa.

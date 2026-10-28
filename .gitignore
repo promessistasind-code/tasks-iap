@@ -32,3 +32,4 @@ dist-ssr
 
 # Local Supabase CLI state (project link cache, not project source)
 supabase/.temp
+test-results/

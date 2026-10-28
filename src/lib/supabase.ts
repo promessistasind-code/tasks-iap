@@ -14,7 +14,7 @@ function fetchWithTimeout(ms: number): typeof fetch {
   return (input, init) => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), ms)
-    return fetch(input, { ...init, signal: init?.signal ?? controller.signal }).finally(() => clearTimeout(timer))
+    return fetch(input, { ...init, signal: init?.signal ? AbortSignal.any([init.signal, controller.signal]) : controller.signal }).finally(() => clearTimeout(timer))
   }
 }
 

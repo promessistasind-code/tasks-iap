@@ -8,7 +8,7 @@
  * ou procurar tarefas existentes (search_tasks) quando for o caso.
  *
  * SETUP:
- * 1. Mesma GEMINI_API_KEY já configurada pra inbox-chat.
+ * 1. Requer GEMINI_API_KEY configurada no ambiente da função.
  * 2. Deploy: supabase functions deploy jarvis-chat --project-ref hjaqbyxjjpodiqinksbk
  */
 

@@ -11,8 +11,6 @@ import { NotesPage } from "@/pages/NotesPage"
 import { CalendarPage } from "@/pages/CalendarPage"
 import { UsersPage } from "@/pages/UsersPage"
 import { SettingsPage } from "@/pages/SettingsPage"
-import { SingingPage } from "@/pages/SingingPage"
-import { InboxPage } from "@/pages/InboxPage"
 import { JarvisPanel } from "@/components/jarvis/JarvisPanel"
 import { TaskDetailSheet } from "@/components/TaskDetailSheet"
 import { CommandPalette } from "@/components/CommandPalette"
@@ -30,7 +28,7 @@ import { Toaster, toast } from "sonner"
 import { Sun, Moon, Monitor, Search, Loader2, Bot, User, ChevronsUpDown, LogOut } from "lucide-react"
 import { isToday, parseISO } from "date-fns"
 
-type Page = "dashboard" | "tasks" | "projects" | "notes" | "calendar" | "users" | "settings" | "singing" | "inbox"
+type Page = "dashboard" | "tasks" | "projects" | "notes" | "calendar" | "users" | "settings"
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -69,10 +67,10 @@ function UserMenu() {
   )
 }
 
-const ADMIN_ONLY_PAGES: Page[] = ["singing", "inbox", "users", "settings"]
+const ADMIN_ONLY_PAGES: Page[] = ["users", "settings"]
 
 function AppInner() {
-  const { loading, saving, setActiveProjectId, tasks } = useApp()
+  const { loading, saving, setActiveProjectId, tasks, loadError, reloadTasks } = useApp()
   const { isAdmin } = useAuth()
   const [page, setPage] = useState<Page>("dashboard")
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
@@ -80,7 +78,7 @@ function AppInner() {
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [jarvisOpen, setJarvisOpen] = useState(false)
 
-  const PAGE_LABELS: Record<Page, string> = { dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações", singing: "Canto", inbox: "Inbox" }
+  const PAGE_LABELS: Record<Page, string> = { dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações" }
 
   // Sai de uma página restrita a admin se a identidade atual deixar de ser admin
   useEffect(() => {
@@ -138,6 +136,9 @@ function AppInner() {
 
         {/* Main — extra bottom padding on mobile for BottomNav */}
         <main className="flex-1 overflow-auto p-4 md:p-6 pb-24 md:pb-6">
+          {loadError && <div role="alert" className="mb-4 rounded-lg border border-destructive p-3 text-sm">
+            {loadError} <Button variant="outline" size="sm" className="ml-2" onClick={() => void reloadTasks()}>Tentar novamente</Button>
+          </div>}
           {loading && (
             <div className="flex flex-col gap-4">
               <Skeleton className="h-8 w-48" />
@@ -160,13 +161,11 @@ function AppInner() {
           {!loading && page === "calendar" && <CalendarPage onOpenTask={t => setDetailTaskId(t.id)} />}
           {!loading && page === "users" && <UsersPage />}
           {!loading && page === "settings" && <SettingsPage />}
-          {!loading && page === "singing" && <SingingPage />}
-          {!loading && page === "inbox" && <InboxPage />}
         </main>
       </SidebarInset>
 
       {/* Mobile bottom nav */}
-      <BottomNav page={page} onNavigate={setPage} onSearch={triggerSearch} isAdmin={isAdmin} />
+      <BottomNav page={page} onNavigate={setPage} onSearch={triggerSearch} />
 
       {/* Global overlays */}
       <TaskDetailSheet task={detailTask} onClose={() => setDetailTaskId(null)} />
@@ -196,7 +195,7 @@ function AuthGate() {
   if (!session) return <LoginPage />
 
   return (
-    <AppProvider>
+    <AppProvider key={session.user.id}>
       <AppInner />
     </AppProvider>
   )

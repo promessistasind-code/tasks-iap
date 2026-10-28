@@ -6,7 +6,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useApp } from "@/context/AppContext"
 import type { Status } from "@/types/task"
-import { LayoutDashboard, CheckSquare, FolderKanban, StickyNote, LayoutList, ChevronLeft, ChevronRight, Users, Settings, MicVocal, Inbox, CalendarDays } from "lucide-react"
+import { LayoutDashboard, CheckSquare, FolderKanban, StickyNote, LayoutList, ChevronLeft, ChevronRight, Users, Settings, CalendarDays } from "lucide-react"
 import { ProjectIcon } from "@/components/ProjectIcon"
 
 function CollapseButton() {
@@ -22,7 +22,7 @@ function CollapseButton() {
   )
 }
 
-type Page = "dashboard" | "tasks" | "projects" | "notes" | "calendar" | "users" | "settings" | "singing" | "inbox"
+type Page = "dashboard" | "tasks" | "projects" | "notes" | "calendar" | "users" | "settings"
 
 interface Props {
   page: Page
@@ -53,7 +53,7 @@ export function AppSidebar({ page, onNavigate, isAdmin }: Props) {
           <div className="flex items-center gap-2">
             <img src="/logo.jpg" alt="" className="size-8 rounded-lg shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight">Tasks System</p>
+              <p className="text-sm font-semibold leading-tight">Promessa Industrial</p>
               <p className="text-xs text-muted-foreground">Gestão de Projetos</p>
             </div>
           </div>
@@ -118,28 +118,7 @@ export function AppSidebar({ page, onNavigate, isAdmin }: Props) {
                 <span>Dashboard</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {isAdmin && (
-              <>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={page === "singing"}
-                    onClick={() => { onNavigate("singing"); setActiveProjectId(null) }}
-                  >
-                    <MicVocal />
-                    <span>Canto</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={page === "inbox"}
-                    onClick={() => { onNavigate("inbox"); setActiveProjectId(null) }}
-                  >
-                    <Inbox />
-                    <span>Inbox</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </>
-            )}
+
           </SidebarMenu>
         </SidebarGroup>
 

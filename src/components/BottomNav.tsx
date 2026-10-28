@@ -1,13 +1,12 @@
-import { LayoutDashboard, CheckSquare, FolderKanban, Search, StickyNote, MicVocal, CalendarDays } from "lucide-react"
+import { LayoutDashboard, CheckSquare, FolderKanban, Search, StickyNote, CalendarDays } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type Page = "dashboard" | "tasks" | "projects" | "notes" | "calendar" | "users" | "settings" | "singing" | "inbox"
+type Page = "dashboard" | "tasks" | "projects" | "notes" | "calendar" | "users" | "settings"
 
 interface Props {
   page: Page
   onNavigate: (p: Page) => void
   onSearch: () => void
-  isAdmin: boolean
 }
 
 const BASE_ITEMS = [
@@ -17,10 +16,9 @@ const BASE_ITEMS = [
   { id: "notes" as Page,     label: "Notas",     Icon: StickyNote },
   { id: "dashboard" as Page, label: "Dashboard", Icon: LayoutDashboard },
 ]
-const ADMIN_ITEM = { id: "singing" as Page, label: "Canto", Icon: MicVocal }
 
-export function BottomNav({ page, onNavigate, onSearch, isAdmin }: Props) {
-  const items = isAdmin ? [...BASE_ITEMS, ADMIN_ITEM] : BASE_ITEMS
+export function BottomNav({ page, onNavigate, onSearch }: Props) {
+  const items = BASE_ITEMS
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 flex md:hidden border-t bg-background/95 backdrop-blur">
       {items.map(({ id, label, Icon }) => (

@@ -17,7 +17,7 @@ function mapNote(row: Record<string, unknown>): Note {
   }
 }
 
-export function useNotesStore() {
+export function useNotesStore(userId: string | null) {
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -30,7 +30,8 @@ export function useNotesStore() {
       setLoading(false)
     }
 
-    supabase.from("lt_notes").select("*").order("pinned", { ascending: false }).order("updated_at", { ascending: false })
+    if (!userId) return
+    supabase.from("lt_notes").select("*").eq("user_id", userId).order("pinned", { ascending: false }).order("updated_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) toast.error("Não consegui carregar as notas")
         finish(data)
@@ -43,8 +44,8 @@ export function useNotesStore() {
       finish()
     }, 10000)
 
-    return () => clearTimeout(timeoutId)
-  }, [])
+    return () => { settled = true; clearTimeout(timeoutId) }
+  }, [userId])
 
   async function createNote(template?: string, initialTags?: string[]): Promise<Note | undefined> {
     const { data, error } = await supabase.from("lt_notes").insert({
@@ -66,7 +67,7 @@ export function useNotesStore() {
     if (patch.color !== undefined) dbPatch.color = patch.color
     if (patch.pinned !== undefined) dbPatch.pinned = patch.pinned
     if (patch.tags !== undefined) dbPatch.tags = patch.tags
-    const { error } = await supabase.from("lt_notes").update(dbPatch).eq("id", id)
+    const { error } = await supabase.from("lt_notes").update(dbPatch).eq("id", id).select('id').single()
     if (error) {
       toast.error("Erro ao salvar nota")
       return false
@@ -76,7 +77,7 @@ export function useNotesStore() {
   }
 
   async function deleteNote(id: string): Promise<boolean> {
-    const { error } = await supabase.from("lt_notes").delete().eq("id", id)
+    const { error } = await supabase.from("lt_notes").delete().eq("id", id).select('id').single()
     if (error) {
       toast.error("Erro ao excluir nota")
       return false
@@ -91,7 +92,7 @@ export function useNotesStore() {
     const ok = await updateNote(id, { pinned: !note.pinned })
     if (!ok) return
     setNotes(prev => {
-      const updated = prev.map(n => n.id === id ? { ...n, pinned: !n.pinned } : n)
+      const updated = prev
       return [...updated.filter(n => n.pinned), ...updated.filter(n => !n.pinned)]
     })
   }

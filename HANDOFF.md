@@ -1,5 +1,7 @@
 # Handoff — migração pra login real (Supabase Auth)
 
+> Documento histórico. As referências abaixo foram substituídas. Consulte README.md e docs/implementation.md para o projeto oficial app-iap e as correções atuais.
+
 Contexto pra quem (ou qual sessão do Claude) pegar esse trabalho a partir daqui. Escrito em 14/08/2026.
 
 ## O que foi pedido

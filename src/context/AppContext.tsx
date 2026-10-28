@@ -13,6 +13,8 @@ interface AppContextValue {
   projects: Project[]
   loading: boolean
   saving: boolean
+  loadError: string | null
+  reloadTasks: () => Promise<void>
   activeProjectId: string | null
   setActiveProjectId: (id: string | null) => void
   addTask: (task: Omit<Task, "id" | "createdAt" | "comments" | "checklist" | "activity" | "links">) => Promise<Task | undefined>
@@ -63,7 +65,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const membersStore = useMembersStore()
   const { session } = useAuth()
   const notificationsStore = useNotificationsStore(session?.user?.id ?? null)
-  const notesStore = useNotesStore()
+  const notesStore = useNotesStore(session?.user?.id ?? null)
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
 
   useEffect(() => { membersStore.fetchMembers() }, [])

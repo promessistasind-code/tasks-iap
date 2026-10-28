@@ -1,4 +1,4 @@
-import { LayoutDashboard, CheckSquare, FolderKanban, Search, StickyNote, CalendarDays, Users } from "lucide-react"
+import { Home, CheckSquare, FolderKanban, Search, StickyNote, CalendarDays, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 import type { Page } from "@/types/navigation"
@@ -15,7 +15,7 @@ const BASE_ITEMS = [
   { id: "tasks" as Page,     label: "Tarefas",   Icon: CheckSquare },
   { id: "projects" as Page,  label: "Projetos",  Icon: FolderKanban },
   { id: "notes" as Page,     label: "Notas",     Icon: StickyNote },
-  { id: "dashboard" as Page, label: "Dashboard", Icon: LayoutDashboard },
+  { id: "home" as Page, label: "Início", Icon: Home },
 ]
 
 export function BottomNav({ page, onNavigate, onSearch }: Props) {

@@ -11,6 +11,7 @@ import type { Note } from "@/types/note"
 
 interface AppContextValue {
   ministries: MinistryWorkspace[]
+  ministryCatalog: MinistryWorkspace[]
   ministriesLoading: boolean
   ministriesError: string | null
   reloadMinistries: () => void

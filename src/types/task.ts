@@ -36,6 +36,7 @@ export interface TaskLink {
 }
 
 export interface Task {
+  completedAt?: string | null
   id: string
   title: string
   description: string

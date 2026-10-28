@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from "@/context/AuthContext"
 import { LoginPage } from "@/pages/LoginPage"
 import { AppSidebar } from "@/components/AppSidebar"
 import { BottomNav } from "@/components/BottomNav"
+import { HomePage } from "@/pages/HomePage"
+import { AnnouncementsPage } from "@/pages/AnnouncementsPage"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { TasksPage } from "@/pages/TasksPage"
 import { MinistriesPage } from "@/pages/MinistriesPage"
@@ -78,13 +80,13 @@ function AppInner() {
   const [newProjectMinistry, setNewProjectMinistry] = useState<string | null>(null)
   const navigate = (target: Page) => { setNewProjectMinistry(null); setPage(target); if (target === "ministries") setMinistryId(null) }
   const selectMinistry = (id: string | null) => { setMinistryId(id); setPage("ministries"); setActiveProjectId(null) }
-  const [page, setPage] = useState<Page>("dashboard")
+  const [page, setPage] = useState<Page>("home")
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
   const detailTask = detailTaskId ? tasks.find(t => t.id === detailTaskId) ?? null : null
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [jarvisOpen, setJarvisOpen] = useState(false)
 
-  const PAGE_LABELS: Record<Page, string> = { dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações", ministries: "Ministérios" }
+  const PAGE_LABELS: Record<Page, string> = { home: "Início", announcements: "Banners e comunicados", dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações", ministries: "Ministérios" }
 
   // Sai de uma página restrita a admin se a identidade atual deixar de ser admin
   useEffect(() => {
@@ -154,6 +156,8 @@ function AppInner() {
               <Skeleton className="h-40" />
             </div>
           )}
+          {!loading && page === "home" && <HomePage onManage={() => setPage("announcements")} />}
+          {!loading && page === "announcements" && <AnnouncementsPage onBack={() => setPage("home")} />}
           {!loading && page === "dashboard" && <DashboardPage />}
           {!loading && page === "tasks" && (
             <TasksPage

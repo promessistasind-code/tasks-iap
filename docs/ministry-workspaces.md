@@ -1,6 +1,6 @@
 # Ministry workspaces — 2026-10-28
 
-Added sidebar ministry navigation and a mobile entry, with a workspace showing functions, ministry projects and tasks. Members see active memberships; administrators see the catalog. Leaders and delegated members retain server-provided creation permissions. Project creation starts with the selected ministry, and task creation is scoped to its project.
+Added sidebar ministry navigation and a mobile entry, with a workspace showing functions, ministry projects and tasks. The sidebar shows only active memberships for members and leaders. The overview shows the full catalog, with disabled cards and no project counts for ministries they do not belong to. Administrators retain access to all ministries. Leaders and delegated members retain server-provided creation permissions. Project creation starts with the selected ministry, and task creation is scoped to its project.
 
 Memberships refresh on focus and after user-management changes. Failed access checks clear ministry state and offer retry. Removing a membership makes its open workspace unavailable. Existing database authorization remains authoritative; this stage changes no schema or records and does not assign legacy projects to a ministry automatically.
 

@@ -54,8 +54,8 @@ export function useMinistriesStore(isAdmin: boolean) {
       window.removeEventListener('ministry-access-changed', reload)
     }
   }, [])
-  const ministries: MinistryWorkspace[] = catalog
-    .filter(m => isAdmin || memberships.some(own => own.ministry_id === m.id && own.active))
+  const ministryCatalog: MinistryWorkspace[] = catalog
     .map(m => ({...m, membership: memberships.find(own => own.ministry_id === m.id && own.active)}))
-  return {ministries, ministriesLoading, ministriesError, reloadMinistries}
+  const ministries = ministryCatalog.filter(m => isAdmin || m.membership)
+  return {ministries, ministryCatalog, ministriesLoading, ministriesError, reloadMinistries}
 }

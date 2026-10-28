@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function MinistriesPage({ministryId,onSelect,onOpenProject,onOpenTask,onManagePeople,onNewProject}: Props) {
-  const {ministries, ministriesLoading, ministriesError, reloadMinistries, projects, tasks, creatableMinistries} = useApp()
+  const {ministries, ministryCatalog, ministriesLoading, ministriesError, reloadMinistries, projects, tasks, creatableMinistries} = useApp()
   const {isAdmin} = useAuth()
   const [taskProjectId, setTaskProjectId] = useState<string | null>(null)
   if (ministriesLoading) return <p role="status">Carregando ministérios…</p>
@@ -25,12 +25,13 @@ export function MinistriesPage({ministryId,onSelect,onOpenProject,onOpenTask,onM
   const ministry = ministries.find(m => m.id === ministryId)
   if (ministryId && !ministry) return <div className="space-y-3"><p>Este ministério não está disponível para sua conta.</p><Button onClick={() => onSelect(null)}>Ver meus ministérios</Button></div>
   if (!ministry) return <div className="space-y-6">
-    <div><h1 className="text-2xl font-bold">Ministérios</h1><p className="text-sm text-muted-foreground">{isAdmin ? 'Acompanhe os espaços de trabalho dos ministérios.' : 'Seus ministérios, funções e atividades em um só lugar.'}</p></div>
+    <div><h1 className="text-2xl font-bold">Ministérios</h1><p className="text-sm text-muted-foreground">{isAdmin ? 'Acompanhe os espaços de trabalho dos ministérios.' : 'Conheça todos os ministérios e acesse aqueles dos quais você faz parte.'}</p></div>
     {!ministries.length && <p className="rounded-xl border p-6 text-sm text-muted-foreground">Você ainda não tem um vínculo ativo com um ministério. O administrador ou um líder autorizado pode adicioná-lo.</p>}
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{ministries.map(m => {
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{ministryCatalog.map(m => {
+      const canAccess = isAdmin || !!m.membership
       const count = projects.filter(p => p.ministryId === m.id).length
-      return <button key={m.id} className="rounded-xl border bg-card p-5 text-left transition-colors hover:border-primary focus-visible:outline-2 focus-visible:outline-primary" onClick={() => onSelect(m.id)}>
-        <Users className="mb-3 size-6 text-primary"/><h2 className="font-semibold">{m.name}</h2><p className="mt-2 text-sm text-muted-foreground">{m.membership?.leader ? 'Liderança' : m.membership ? 'Membro' : 'Acesso administrativo'} · {count} projeto{count === 1 ? '' : 's'}</p>
+      return <button key={m.id} disabled={!canAccess} className="rounded-xl border bg-card p-5 text-left transition-colors enabled:hover:border-primary disabled:cursor-not-allowed disabled:bg-muted/40 focus-visible:outline-2 focus-visible:outline-primary" onClick={() => {if (canAccess) onSelect(m.id)}}>
+        <Users className="mb-3 size-6 text-primary"/><h2 className="font-semibold">{m.name}</h2><p className="mt-2 text-sm text-muted-foreground">{canAccess ? <>{m.membership?.leader ? 'Liderança' : m.membership ? 'Membro' : 'Acesso administrativo'} · {count} projeto{count === 1 ? '' : 's'}</> : 'Acesso exclusivo aos integrantes'}</p>
       </button>
     })}</div>
   </div>

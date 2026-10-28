@@ -31,6 +31,7 @@ export function mapTask(
     tags: (row.tags as string[]) ?? [],
     recurring: (row.recurring as Recurring) ?? null,
     position: (row.position as number) ?? 0,
+    completedAt: (row.completed_at as string) ?? null,
     createdAt: row.created_at as string,
     comments,
     checklist,

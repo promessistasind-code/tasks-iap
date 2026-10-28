@@ -6,7 +6,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { useApp } from "@/context/AppContext"
 import type { Status } from "@/types/task"
-import { LayoutDashboard, CheckSquare, FolderKanban, StickyNote, LayoutList, ChevronLeft, ChevronRight, Users, Settings, CalendarDays } from "lucide-react"
+import { Home, LayoutDashboard, CheckSquare, FolderKanban, StickyNote, LayoutList, ChevronLeft, ChevronRight, Users, Settings, CalendarDays } from "lucide-react"
 import { ProjectIcon } from "@/components/ProjectIcon"
 
 function CollapseButton() {
@@ -70,6 +70,7 @@ export function AppSidebar({ page, onNavigate, isAdmin, selectedMinistryId, onSe
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarMenu>
+            <SidebarMenuItem><SidebarMenuButton isActive={page === "home"} onClick={() => onNavigate("home")}><Home/><span>Início</span></SidebarMenuButton></SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 isActive={page === "calendar"}

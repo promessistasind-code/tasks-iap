@@ -87,7 +87,8 @@ try {
  await page.goto(origin)
  await page.getByRole('button',{name:'Visão dos ministérios',exact:true}).click()
  await page.getByRole('heading',{name:'Ministérios',exact:true}).waitFor()
- assert.equal(await page.getByRole('button',{name:'Comunicação',exact:true}).count(),0)
+ assert.equal(await page.getByRole('button',{name:'Comunicação',exact:true}).count(),0,'sidebar must hide other ministries')
+ assert.equal(await page.getByRole('button',{name:'Comunicação Acesso exclusivo aos integrantes',exact:true}).isDisabled(),true,'overview shows other ministries without granting entry')
  await page.getByRole('button',{name:'Celebração',exact:true}).click()
  await page.getByText('Suas funções: Vocalista',{exact:true}).waitFor()
  await page.getByRole('heading',{name:'Fixture project',exact:true}).waitFor()
@@ -99,6 +100,9 @@ try {
  assert.equal(await page.getByRole('heading',{name:'Fixture project',exact:true}).count(),0)
  revoked = false; role = 'leader'
  await page.reload()
+ await page.getByRole('button',{name:'Visão dos ministérios',exact:true}).click()
+ assert.equal(await page.getByRole('button',{name:'Comunicação Acesso exclusivo aos integrantes',exact:true}).isDisabled(),true,'leaders cannot open other ministries')
+ assert.equal(await page.getByRole('button',{name:'Comunicação',exact:true}).count(),0)
  await page.getByRole('button',{name:'Celebração',exact:true}).click()
  await page.getByRole('button',{name:'Criar tarefa',exact:true}).click()
  await page.getByRole('heading',{name:'Nova tarefa',exact:true}).waitFor()
@@ -127,5 +131,5 @@ try {
  await page.getByRole('button',{name:'Tentar novamente',exact:true}).click()
  await page.getByText('Suas funções: Vocalista',{exact:true}).waitFor()
  assert.deepEqual(errors,[])
- console.log('Ministry navigation: membership, revocation, leader actions, admin scope, mobile and error recovery passed')
+ console.log('Catalog visibility and locked access for members/leaders passed. Ministry navigation: membership, revocation, leader actions, admin scope, mobile and error recovery passed')
 } finally { await browser.close() }

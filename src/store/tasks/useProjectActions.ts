@@ -20,6 +20,7 @@ export function useProjectActions({setSaving,setProjects,setTasks}: Options) {
       const { data, error } = await withTimeout(supabase.from("lt_projects").insert({
         name: projectData.name, color: projectData.color, emoji: projectData.emoji,
         created_by: user?.id ?? null,
+        ministry_id: projectData.ministryId || null,
       }).select().single())
       if (error || !data) {
         toast.error("Erro ao criar projeto")
@@ -45,6 +46,7 @@ export function useProjectActions({setSaving,setProjects,setTasks}: Options) {
       if (patch.color !== undefined) dbPatch.color = patch.color
       if (patch.emoji !== undefined) dbPatch.emoji = patch.emoji
       if (patch.suspended !== undefined) dbPatch.suspended = patch.suspended
+      if (patch.ministryId !== undefined) dbPatch.ministry_id = patch.ministryId || null
       const { error } = await withTimeout(supabase.from("lt_projects").update(dbPatch).eq("id", id).select("id").single())
       if (error) {
         toast.error(patch.suspended !== undefined ? "Só administradores podem suspender/reativar um projeto" : "Erro ao atualizar projeto")

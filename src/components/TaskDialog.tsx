@@ -29,10 +29,12 @@ const emptyForm = {
   dueDate: "",
   tags: [] as string[],
   assignee: null as string | null,
+  assigneeId: null as string | null,
 }
 
 export function TaskDialog({ open, onClose, task, defaultStatus }: TaskDialogProps) {
-  const { addTask, updateTask, projects, activeProjectId, tasks, members } = useApp()
+  const { addTask, updateTask, projects: allProjects, activeProjectId, tasks, members } = useApp()
+  const projects = allProjects.filter(p => p.canCreateTasks || p.id === task?.projectId)
   const [form, setForm] = useState(emptyForm)
   const [tagInput, setTagInput] = useState("")
 
@@ -50,13 +52,14 @@ export function TaskDialog({ open, onClose, task, defaultStatus }: TaskDialogPro
         dueDate: task.dueDate ?? "",
         tags: task.tags,
         assignee: task.assignee ?? null,
+        assigneeId: task.assigneeId ?? null,
       })
     } else {
-      const defaultProject = activeProjectId ?? projects[0]?.id ?? ""
+      const defaultProject = projects.find(p => p.id === activeProjectId)?.id ?? projects[0]?.id ?? ""
       setForm({ ...emptyForm, status: defaultStatus ?? "todo", projectId: defaultProject })
     }
     setTagInput("")
-  }, [task, open, defaultStatus, projects, activeProjectId])
+  }, [task, open, defaultStatus, allProjects, activeProjectId])
 
   async function handleSave() {
     if (!form.title.trim()) return
@@ -142,7 +145,7 @@ export function TaskDialog({ open, onClose, task, defaultStatus }: TaskDialogPro
           {/* Projeto: largura total para não truncar */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-muted-foreground">Projeto</label>
-            <Select value={form.projectId} onValueChange={v => setForm(f => ({ ...f, projectId: v }))}>
+            <Select value={form.projectId} onValueChange={v => setForm(f => ({ ...f, projectId: v, assignee: null, assigneeId: null }))}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {projects.map(p => (
@@ -170,8 +173,8 @@ export function TaskDialog({ open, onClose, task, defaultStatus }: TaskDialogPro
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-muted-foreground">Responsável</label>
               <Select
-                value={form.assignee ?? "none"}
-                onValueChange={v => setForm(f => ({ ...f, assignee: v === "none" ? null : v }))}
+                value={form.assigneeId ?? "none"}
+                onValueChange={v => setForm(f => ({ ...f, assigneeId: v === "none" ? null : v, assignee: members.find(m => m.id === v)?.name ?? null }))}
               >
                 <SelectTrigger>
                   <SelectValue>
@@ -187,8 +190,8 @@ export function TaskDialog({ open, onClose, task, defaultStatus }: TaskDialogPro
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none" className="text-xs">Ninguém</SelectItem>
-                  {members.map(m => (
-                    <SelectItem key={m.id} value={m.name} className="text-xs">
+                  {members.filter(m => projects.find(p => p.id === form.projectId)?.eligibleMemberIds?.includes(m.id)).map(m => (
+                    <SelectItem key={m.id} value={m.id} className="text-xs">
                       <span className="flex items-center gap-2">
                         <MemberAvatar member={m} size="xs" />
                         {m.name}
@@ -233,7 +236,7 @@ export function TaskDialog({ open, onClose, task, defaultStatus }: TaskDialogPro
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={!form.title.trim()}>
+          <Button onClick={handleSave} disabled={!form.title.trim() || !form.projectId}>
             {task ? "Salvar" : "Criar tarefa"}
           </Button>
         </DialogFooter>

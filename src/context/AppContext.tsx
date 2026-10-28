@@ -11,6 +11,10 @@ import type { Note } from "@/types/note"
 interface AppContextValue {
   tasks: Task[]
   projects: Project[]
+  creatableMinistries: {id: string; name: string}[]
+  canEditTask: (task: Task) => boolean
+  canCommentTask: (task: Task) => boolean
+  canCreateTask: (projectId: string) => boolean
   loading: boolean
   saving: boolean
   loadError: string | null
@@ -61,9 +65,9 @@ interface AppContextValue {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const store = useTaskStore()
+  const { session, isAdmin } = useAuth()
+  const store = useTaskStore({id: session?.user.id, isAdmin})
   const membersStore = useMembersStore()
-  const { session } = useAuth()
   const notificationsStore = useNotificationsStore(session?.user?.id ?? null)
   const notesStore = useNotesStore(session?.user?.id ?? null)
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)

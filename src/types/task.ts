@@ -5,6 +5,7 @@ export interface Member {
   name: string
   color: string
   initials: string
+  isAdmin?: boolean
 }
 export type Priority = "none" | "low" | "medium" | "high" | "urgent"
 export type Recurring = "daily" | "weekly" | "biweekly" | "monthly" | null
@@ -51,6 +52,9 @@ export interface Task {
   activity: ActivityEntry[]
   links: TaskLink[]
   assignee: string | null
+  assigneeId?: string | null
+  teamIds?: string[]
+  createdBy?: string | null
 }
 
 export interface Project {
@@ -60,6 +64,11 @@ export interface Project {
   emoji: string
   suspended: boolean
   createdBy: string | null
+  memberIds?: string[]
+  ministryId?: string | null
+  canManage?: boolean
+  canCreateTasks?: boolean
+  eligibleMemberIds?: string[]
 }
 
 export const STATUS_CONFIG: Record<Status, { label: string; color: string; bg: string }> = {

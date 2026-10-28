@@ -12,10 +12,13 @@ DO $$ BEGIN
    SELECT id,'Foundation','Test',email,'11999999999','1990-01-01',now(),id,'test-only' FROM public.profiles WHERE email LIKE 'foundation-%@example.invalid';
  END IF;
 END $$;
+UPDATE public.profiles SET name='Owner' WHERE id='10000000-0000-0000-0000-000000000001';
+INSERT INTO private.ministries(id,name) VALUES('29000000-0000-0000-0000-000000000001','Foundation ministry');
+INSERT INTO private.ministry_members(person_id,ministry_id,leader,added_by) SELECT id,'29000000-0000-0000-0000-000000000001',true,user_id FROM private.people WHERE user_id='10000000-0000-0000-0000-000000000001';
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',true);
-INSERT INTO public.lt_projects(id,name,color,emoji,created_by) VALUES
-('20000000-0000-0000-0000-000000000001','Foundation test','#fff','folder',auth.uid());
+INSERT INTO public.lt_projects(id,name,color,emoji,created_by,ministry_id) VALUES
+('20000000-0000-0000-0000-000000000001','Foundation test','#fff','folder',auth.uid(),'29000000-0000-0000-0000-000000000001');
 DO $$ BEGIN
   IF NOT EXISTS(SELECT 1 FROM public.lt_project_members WHERE project_id='20000000-0000-0000-0000-000000000001' AND user_id=auth.uid() AND role='owner') THEN RAISE EXCEPTION 'Owner enrollment failed'; END IF;
 END $$;

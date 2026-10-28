@@ -8,6 +8,7 @@ function mapMember(row: Record<string, unknown>): Member {
     name: row.name as string,
     color: row.color as string,
     initials: row.initials as string,
+    isAdmin: !!row.is_admin,
   }
 }
 
@@ -18,7 +19,7 @@ export function useMembersStore() {
   async function fetchMembers() {
     setLoading(true)
     try {
-      const { data } = await supabase.from("profiles").select("id,name,color,initials,created_at").order("created_at")
+      const { data } = await supabase.from("profiles").select("id,name,color,initials,is_admin,created_at").order("created_at")
       setMembers((data ?? []).map(mapMember))
     } finally {
       setLoading(false)

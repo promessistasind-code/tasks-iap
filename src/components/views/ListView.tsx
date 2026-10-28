@@ -48,7 +48,8 @@ interface RowProps {
 }
 
 function SortableRow(props: RowProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.task.id })
+  const {canEditTask} = useApp()
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.task.id, disabled: !canEditTask(props.task) })
   const style = { transform: CSS.Transform.toString(transform), transition }
   return <TaskRow {...props} dragRef={setNodeRef} dragStyle={style} dragHandleProps={{ ...attributes, ...listeners }} isDragging={isDragging} />
 }
@@ -64,7 +65,7 @@ function TaskRow({
   dragHandleProps?: Record<string, unknown>
   isDragging?: boolean
 }) {
-  const { projects, deleteTask, moveTask, updateTask, addChecklistItem, toggleChecklistItem, updateChecklistItem, deleteChecklistItem, reorderChecklist, duplicateTask, saving, members } = useApp()
+  const { canEditTask, projects, deleteTask, moveTask, updateTask, addChecklistItem, toggleChecklistItem, updateChecklistItem, deleteChecklistItem, reorderChecklist, duplicateTask, saving, members } = useApp()
   const [savingDate, setSavingDate] = useState(false)
   const [dueDate, setDueDate] = useState(task.dueDate ?? "")
   const [editingTitle, setEditingTitle] = useState(false)
@@ -148,6 +149,7 @@ function TaskRow({
     onChecklistTextChange("")
   }
 
+  if (!canEditTask(task)) return <tr ref={dragRef}><td colSpan={9} className="border-b p-3"><button className="flex w-full items-center gap-4 text-left" onClick={() => onOpenTask(task)}><span className="flex-1">{task.title}</span><span>{status.label}</span><span>{priority.label}</span><span>{task.assignee ?? 'Sem responsável'}</span><span className="text-xs">Abrir detalhes</span></button></td></tr>
   return (
     <>
       <tr
@@ -342,11 +344,11 @@ function TaskRow({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-[160px]">
-              {members.map(m => (
+              {members.filter(m => project?.eligibleMemberIds?.includes(m.id)).map(m => (
                 <DropdownMenuItem
                   key={m.id}
                   className="text-xs gap-2"
-                  onClick={() => updateTask(task.id, { assignee: task.assignee === m.name ? null : m.name })}
+                  onClick={() => updateTask(task.id, { assigneeId: task.assigneeId === m.id ? null : m.id, assignee: task.assigneeId === m.id ? null : m.name })}
                 >
                   <MemberAvatar member={m} size="xs" />
                   {m.name}
@@ -394,7 +396,8 @@ function TaskRow({
 
 // ─── Inline add row ──────────────────────────────────────────────────────────
 function InlineAddRow({ activeProjectId, defaultProjectId }: { activeProjectId: string | null; defaultProjectId: string }) {
-  const { addTask, tasks, projects, members } = useApp()
+  const { addTask, tasks, projects: allProjects, members } = useApp()
+  const projects = allProjects.filter(p => p.canCreateTasks)
   const [active, setActive] = useState(false)
   const [title, setTitle] = useState("")
   const [status, setStatus] = useState<Status>("todo")
@@ -456,6 +459,7 @@ function InlineAddRow({ activeProjectId, defaultProjectId }: { activeProjectId: 
     })()
   }
 
+  if (!projects.length || activeProjectId && !projects.some(p => p.id === activeProjectId)) return null
   if (!active) {
     return (
       <tr>
@@ -586,7 +590,7 @@ function InlineAddRow({ activeProjectId, defaultProjectId }: { activeProjectId: 
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="min-w-[160px]">
-            {members.map(m => (
+            {members.filter(m => projects.find(p => p.id === (activeProjectId ?? projectId))?.eligibleMemberIds?.includes(m.id)).map(m => (
               <DropdownMenuItem key={m.id} className="text-xs gap-2" onClick={() => setAssignee(assignee === m.name ? null : m.name)}>
                 <MemberAvatar member={m} size="xs" />
                 {m.name}
@@ -925,7 +929,7 @@ export function ListView({ onOpenTask, todayFilter = false, noDueDateFilter = fa
                         onChecklistTextChange={v => setNewChecklistItems(prev => ({ ...prev, [task.id]: v }))}
                       />
                     ))}
-                    <InlineAddRow activeProjectId={activeProjectId} defaultProjectId={projects[0]?.id ?? ""} />
+                    <InlineAddRow activeProjectId={activeProjectId} defaultProjectId={projects.find(p => p.canCreateTasks)?.id ?? ""} />
                   </tbody>
                 </table>
               </SortableContext>

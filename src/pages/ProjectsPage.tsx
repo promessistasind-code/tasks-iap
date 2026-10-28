@@ -18,11 +18,11 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { ProjectFilesDialog } from "@/components/ProjectFilesDialog"
 
-const emptyForm = { name: "", emoji: "target", color: PROJECT_COLORS[0] }
+const emptyForm = { name: "", emoji: "target", color: PROJECT_COLORS[0], ministryId: "" }
 
 export function ProjectsPage() {
-  const { projects, tasks, members, addProject, updateProject, deleteProject, sendProjectInvite, cancelInvite } = useApp()
-  const { isAdmin } = useAuth()
+  const { creatableMinistries, projects, tasks, members, addProject, updateProject, deleteProject, sendProjectInvite, cancelInvite } = useApp()
+  const { isAdmin, session } = useAuth()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -63,13 +63,13 @@ export function ProjectsPage() {
 
   function openNew() {
     setEditingProject(null)
-    setForm(emptyForm)
+    setForm({...emptyForm, ministryId: creatableMinistries[0]?.id ?? ""})
     setDialogOpen(true)
   }
 
   function openEdit(project: Project) {
     setEditingProject(project)
-    setForm({ name: project.name, emoji: project.emoji, color: project.color })
+    setForm({ name: project.name, emoji: project.emoji, color: project.color, ministryId: project.ministryId ?? "" })
     setDialogOpen(true)
   }
 
@@ -124,9 +124,9 @@ export function ProjectsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Projetos</h1>
-            <p className="text-muted-foreground text-sm">Gerencie as áreas de trabalho da agência</p>
+            <p className="text-muted-foreground text-sm">Gerencie os projetos dos ministérios</p>
           </div>
-          <Button onClick={openNew}>
+          <Button onClick={openNew} disabled={!creatableMinistries.length}>
             <Plus className="size-4" data-icon="inline-start" />
             Novo projeto
           </Button>
@@ -161,13 +161,13 @@ export function ProjectsPage() {
                       </div>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="size-7" title="Convidar" onClick={() => setInviteProject(project)}>
+                      <Button variant="ghost" size="icon" className="size-7" disabled={!project.canManage} title="Convidar" onClick={() => setInviteProject(project)}>
                         <Users className="size-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="size-7" title="Arquivos" onClick={() => setFilesProject(project)}>
                         <Paperclip className="size-3.5" />
                       </Button>
-                      {isAdmin && (
+                      {project.canManage && (
                         <Button
                           variant="ghost" size="icon" className="size-7"
                           title={project.suspended ? "Reativar projeto" : "Suspender projeto"}
@@ -176,14 +176,14 @@ export function ProjectsPage() {
                           {project.suspended ? <PlayCircle className="size-3.5" /> : <Ban className="size-3.5" />}
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="size-7" onClick={() => openEdit(project)}>
+                      <Button variant="ghost" size="icon" className="size-7" disabled={!project.canManage} onClick={() => openEdit(project)}>
                         <Pencil className="size-3.5" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="size-7 hover:text-destructive"
-                        onClick={() => handleDelete(project)}
+                        disabled={!isAdmin && project.createdBy !== session?.user.id} onClick={() => handleDelete(project)}
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
@@ -222,7 +222,7 @@ export function ProjectsPage() {
           })}
 
           <button
-            onClick={openNew}
+            onClick={openNew} disabled={!creatableMinistries.length}
             className="rounded-xl border-2 border-dashed border-muted-foreground/20 hover:border-primary/40 hover:bg-muted/30 transition-all flex flex-col items-center justify-center gap-2 p-6 min-h-[160px] text-muted-foreground hover:text-foreground"
           >
             <div className="size-10 rounded-xl bg-muted flex items-center justify-center">
@@ -241,6 +241,12 @@ export function ProjectsPage() {
 
           <ScrollArea className="flex-1 overflow-y-auto -mx-6 px-6">
           <div className="flex flex-col gap-4 pb-2">
+            <label className="text-sm">Ministério
+              <select aria-label="Ministério do projeto" className="mt-1 w-full rounded border bg-background p-2" value={form.ministryId} disabled={!!editingProject && !isAdmin} onChange={e => setForm(f => ({...f, ministryId: e.target.value}))}>
+                <option value="">Selecione o ministério</option>
+                {creatableMinistries.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </label>
             {/* Preview */}
             <div className="flex items-center gap-3 p-3 rounded-lg border">
               <div
@@ -309,7 +315,7 @@ export function ProjectsPage() {
 
           <DialogFooter className="shrink-0 pt-2 border-t">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} disabled={!form.name.trim()}>
+            <Button onClick={handleSave} disabled={!form.name.trim() || (!editingProject && !form.ministryId)}>
               {editingProject ? "Salvar" : "Criar projeto"}
             </Button>
           </DialogFooter>

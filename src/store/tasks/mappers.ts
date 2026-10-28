@@ -8,6 +8,8 @@ export function mapProject(row: Record<string, unknown>): Project {
     emoji: row.emoji as string,
     suspended: !!row.suspended,
     createdBy: (row.created_by as string) ?? null,
+    ministryId: (row.ministry_id as string) ?? null,
+    memberIds: ((row.lt_project_members as { user_id: string }[] | undefined) ?? []).map(m => m.user_id),
   }
 }
 
@@ -35,6 +37,9 @@ export function mapTask(
     activity,
     links,
     assignee: (row.assignee as string) ?? null,
+    assigneeId: (row.assignee_id as string) ?? null,
+    teamIds: (row.team_ids as string[]) ?? [],
+    createdBy: (row.created_by as string) ?? null,
   }
 }
 

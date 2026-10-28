@@ -19,7 +19,7 @@ interface KanbanViewProps { onOpenTask: (task: Task) => void; assigneeFilter?: s
 
 // ─── Inline add ───────────────────────────────────────────────────────────────
 function InlineAdd({ status, defaultProjectId }: { status: Status; defaultProjectId: string }) {
-  const { addTask } = useApp()
+  const { addTask, canCreateTask } = useApp()
   const [active, setActive] = useState(false)
   const [title, setTitle] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
@@ -50,6 +50,7 @@ function InlineAdd({ status, defaultProjectId }: { status: Status; defaultProjec
     setActive(false)
   }
 
+  if (!canCreateTask(defaultProjectId)) return null
   if (!active) {
     return (
       <button
@@ -86,7 +87,7 @@ function InlineAdd({ status, defaultProjectId }: { status: Status; defaultProjec
 
 // ─── Task Card ────────────────────────────────────────────────────────────────
 function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) => void }) {
-  const { moveTask, projects, addChecklistItem, toggleChecklistItem, updateTask } = useApp()
+  const { canEditTask, moveTask, projects, addChecklistItem, toggleChecklistItem, updateTask } = useApp()
   const [checklistOpen, setChecklistOpen] = useState(false)
   const [dueDate, setDueDate] = useState(task.dueDate ?? "")
   const [newItem, setNewItem] = useState("")
@@ -128,6 +129,7 @@ function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) =>
     if (ok) toast.success(isDone ? "Tarefa reaberta" : "Tarefa concluída!")
   }
 
+  if (!canEditTask(task)) return <button className="w-full rounded-xl border bg-card p-3 text-left" onClick={() => onOpenTask(task)}><strong>{task.title}</strong><p className="text-xs text-muted-foreground">{task.assignee ?? "Sem responsável"} · {PRIORITY_CONFIG[task.priority].label}</p><span className="text-xs">Abrir detalhes</span></button>
   return (
     <div
       className={cn(
@@ -298,7 +300,7 @@ export function KanbanView({ onOpenTask, assigneeFilter = [], dueDateFilter = nu
         return true
       })
     : afterAssignee
-  const defaultProjectId = activeProjectId ?? allProjects[0]?.id ?? ""
+  const defaultProjectId = activeProjectId ?? allProjects.find(p => p.canCreateTasks)?.id ?? ""
 
   async function handleDrop(e: React.DragEvent, status: Status) {
     e.preventDefault()

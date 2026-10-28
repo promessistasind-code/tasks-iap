@@ -106,7 +106,7 @@ export function TasksPage({ onOpenTask, newTaskOpen = false, onNewTaskClose }: P
         {/* Header */}
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl sm:text-2xl font-bold">Tarefas</h1>
-          <Button onClick={() => setLocalNewOpen(true)} size="sm" className="shrink-0 gap-1.5" disabled={readOnly}>
+          <Button onClick={() => setLocalNewOpen(true)} size="sm" className="shrink-0 gap-1.5" disabled={readOnly || !(activeProjectId ? activeProject?.canCreateTasks : projects.some(p => p.canCreateTasks))}>
             <Plus className="size-4" />
             <span className="hidden sm:inline">Nova tarefa</span>
             <span className="sm:hidden">Nova</span>

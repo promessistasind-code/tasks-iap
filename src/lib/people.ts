@@ -29,6 +29,8 @@ export interface Membership {
   can_add: boolean
   can_edit_roles: boolean
   can_remove: boolean
+  can_create_projects?: boolean
+  can_create_tasks?: boolean
   active: boolean
   added_by: string
 }
@@ -64,6 +66,8 @@ export function membershipPayload(m: Membership) {
     canAdd: m.can_add,
     canEditRoles: m.can_edit_roles,
     canRemove: m.can_remove,
+    canCreateProjects: !!m.can_create_projects,
+    canCreateTasks: !!m.can_create_tasks,
     active: m.active,
   }
 }

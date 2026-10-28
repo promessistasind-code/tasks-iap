@@ -7,6 +7,7 @@ import { mapProject, mapTask, mapComment, mapChecklist, mapActivity, mapTaskLink
 export function useTaskData() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [projects, setProjects] = useState<Project[]>([])
+  const [creatableMinistries, setCreatableMinistries] = useState<{id: string; name: string}[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const reloadRef = useRef<() => void>(() => {})
@@ -23,17 +24,21 @@ export function useTaskData() {
       if (running) { dirty = true; return }
       running = true
       try {
-        // Embed only children of visible tasks; two requests instead of six scans.
-        const [projectResult, taskResult] = await Promise.all([
-          supabase.from('lt_projects').select('*').order('created_at').abortSignal(controller.signal),
+        // Load visible tasks with their children and authoritative workspace permissions.
+        const [projectResult, taskResult, accessResult] = await Promise.all([
+          supabase.from('lt_projects').select('*,lt_project_members(user_id)').order('created_at').abortSignal(controller.signal),
           supabase.from('lt_tasks').select('*,lt_task_comments(*),lt_task_checklist(*),lt_task_activity(*),lt_task_links(*)')
             .order('position').order('created_at', { ascending: false }).abortSignal(controller.signal),
+          supabase.rpc('workspace_access').abortSignal(controller.signal),
         ])
         if (projectResult.error) throw projectResult.error
         if (taskResult.error) throw taskResult.error
+        if (accessResult.error) throw accessResult.error
         if (!active) return
         setLoadError(null)
-        setProjects((projectResult.data ?? []).map(mapProject))
+        const access = accessResult.data as {ministries?: {id: string; name: string}[]; projects?: Pick<Project, 'id' | 'canManage' | 'canCreateTasks' | 'eligibleMemberIds'>[]} | null
+        setCreatableMinistries(access?.ministries ?? [])
+        setProjects((projectResult.data ?? []).map(row => ({...mapProject(row), ...access?.projects?.find(p => p.id === row.id)})))
         setTasks((taskResult.data ?? []).map(row => mapTask(row,
           [...row.lt_task_comments].sort((a,b) => a.created_at.localeCompare(b.created_at)).map(mapComment),
           [...row.lt_task_checklist].sort((a,b) => a.position-b.position || a.created_at.localeCompare(b.created_at)).map(mapChecklist),
@@ -78,5 +83,5 @@ export function useTaskData() {
       void supabase.removeChannel(channel)
     }
   }, [])
-  return { tasks, setTasks, projects, setProjects, loading, loadError, reload }
+  return { tasks, setTasks, projects, setProjects, creatableMinistries, loading, loadError, reload }
 }

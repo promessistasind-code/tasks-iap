@@ -14,6 +14,8 @@ import type { Task, Status, Priority, Recurring } from "@/types/task"
 import { STATUS_CONFIG, PRIORITY_CONFIG, RECURRING_CONFIG } from "@/types/task"
 import { ProjectIcon } from "@/components/ProjectIcon"
 import { MemberAvatar } from "@/components/MemberAvatar"
+import { TaskPeoplePicker } from "@/components/TaskPeoplePicker"
+import { TaskReadOnly } from "@/components/TaskReadOnly"
 import { ChecklistEditor } from "@/components/ChecklistEditor"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -32,11 +34,12 @@ interface Props {
 
 // Wrapper — keeps the Sheet animation alive even when task becomes null
 export function TaskDetailSheet({ task, onClose }: Props) {
+  const {canEditTask} = useApp()
   return (
     <Sheet open={!!task} onOpenChange={v => !v && onClose()}>
       <SheetContent className="w-full sm:max-w-[620px] p-0 flex flex-col gap-0" side="right" data-vaul-drawer-direction="right">
         <SheetTitle className="sr-only">Detalhes da tarefa</SheetTitle>
-        {task && <TaskDetailContent task={task} onClose={onClose} />}
+        {task && (canEditTask(task) ? <TaskDetailContent task={task} onClose={onClose} /> : <TaskReadOnly task={task} />)}
       </SheetContent>
     </Sheet>
   )
@@ -45,7 +48,7 @@ export function TaskDetailSheet({ task, onClose }: Props) {
 // Inner component — task is always Task (never null) here
 function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void }) {
   const {
-    projects, updateTask, deleteTask, moveTask,
+    canCreateTask, projects, updateTask, deleteTask, moveTask,
     addComment, deleteComment,
     addChecklistItem, toggleChecklistItem, updateChecklistItem, deleteChecklistItem, reorderChecklist,
     addTaskLink, deleteTaskLink, duplicateTask,
@@ -179,7 +182,7 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
           )}
         </div>
         <div className="flex items-center gap-0.5 shrink-0">
-          <Button variant="ghost" size="icon" className="size-7" onClick={handleDuplicate} title="Duplicar tarefa">
+          <Button variant="ghost" size="icon" className="size-7" disabled={!canCreateTask(task.projectId)} onClick={handleDuplicate} title="Duplicar tarefa">
             <Copy className="size-3.5" />
           </Button>
           <Button variant="ghost" size="icon" className="size-7 hover:text-destructive" onClick={handleDelete} title="Excluir tarefa">
@@ -272,36 +275,7 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
               </Select>
             </CompactProp>
 
-            <CompactProp label="Responsável">
-              <Select
-                value={task.assignee ?? "none"}
-                onValueChange={v => updateTask(task.id, { assignee: v === "none" ? null : v }, `Responsável: ${v === "none" ? "Ninguém" : v}`)}
-              >
-                <SelectTrigger className="h-7 text-xs border-0 shadow-none bg-transparent focus:ring-0 w-full justify-start gap-1.5 px-1.5">
-                  <SelectValue>
-                    {task.assignee ? (
-                      <span className="flex items-center gap-1.5">
-                        <MemberAvatar member={members.find(m => m.name === task.assignee)!} size="xs" />
-                        {task.assignee}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Ninguém</span>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none" className="text-xs">Ninguém</SelectItem>
-                  {members.map(m => (
-                    <SelectItem key={m.id} value={m.name} className="text-xs">
-                      <span className="flex items-center gap-2">
-                        <MemberAvatar member={m} size="xs" />
-                        {m.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CompactProp>
+            <TaskPeoplePicker task={task} />
           </div>
 
           {task.tags.length > 0 && (

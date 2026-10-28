@@ -654,6 +654,8 @@ export function UsersPage() {
                   />
                 ))}
               <hr />
+              <Toggle label="Pode criar projetos neste ministério" checked={!!membership.can_create_projects} onChange={(can_create_projects) => setMembership({...membership, can_create_projects})} />
+              <Toggle label="Pode criar tarefas neste ministério" checked={!!membership.can_create_tasks} onChange={(can_create_tasks) => setMembership({...membership, can_create_tasks})} />
               <Toggle
                 label="Vínculo ativo"
                 checked={membership.active}

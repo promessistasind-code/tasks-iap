@@ -8,8 +8,8 @@ import { useTaskData } from "./tasks/useTaskData"
 import { useProjectActions } from "./tasks/useProjectActions"
 import { upsertById } from "./tasks/state"
 
-export function useTaskStore() {
-  const { tasks, setTasks, projects, setProjects, loading, loadError, reload } = useTaskData()
+export function useTaskStore(actor: {id?: string; isAdmin?: boolean} = {}) {
+  const { tasks, setTasks, projects, setProjects, creatableMinistries, loading, loadError, reload } = useTaskData()
   const [pendingWrites, setPendingWrites] = useState(0)
   const saving = pendingWrites > 0
   const moveLocks = useRef(new Set<string>())
@@ -24,16 +24,32 @@ export function useTaskStore() {
     if (!value) void reload()
   }
 
+  function canCreateTask(projectId: string) { return !!projects.find(p => p.id === projectId)?.canCreateTasks }
+  function canEditTask(task: Task) {
+    const project = projects.find(p => p.id === task.projectId)
+    return !!project && (!!actor.isAdmin || (!project.suspended && (!!project.canManage || !!actor.id && task.assigneeId === actor.id)))
+  }
+  function canCommentTask(task: Task) {
+    const project = projects.find(p => p.id === task.projectId)
+    return canEditTask(task) || !!project && !project.suspended && !!actor.id && !!task.teamIds?.includes(actor.id)
+  }
+  function allowEdit(id: string) {
+    const task = tasks.find(t => t.id === id)
+    if (task && canEditTask(task)) return true
+    toast.error('Você não tem permissão para alterar esta tarefa.')
+    return false
+  }
+
   // ── Reorder ────────────────────────────────────────────────────────────────
 
   async function reorderTasks(orderedIds: string[]) {
-    const ids = Array.from(new Set(orderedIds)).filter(id => tasks.some(t => t.id === id))
+    const ids = Array.from(new Set(orderedIds)).filter(id => tasks.some(t => t.id === id && canEditTask(t)))
     try {
       setSaving(true)
     setTasks(prev => {
       const byId = Object.fromEntries(prev.map(t => [t.id, t]))
-      const reordered = Array.from(new Set(orderedIds)).filter(id => byId[id]).map((id, i) => ({ ...byId[id], position: i }))
-      const rest = prev.filter(t => !orderedIds.includes(t.id))
+      const reordered = ids.filter(id => byId[id]).map((id, i) => ({ ...byId[id], position: i }))
+      const rest = prev.filter(t => !ids.includes(t.id))
       return [...reordered, ...rest]
     })
     // Batch update positions in Supabase
@@ -47,6 +63,7 @@ export function useTaskStore() {
   // ── Tasks ──────────────────────────────────────────────────────────────────
 
   async function addTask(taskData: Omit<Task, "id" | "createdAt" | "comments" | "checklist" | "activity" | "links">) {
+    if (!canCreateTask(taskData.projectId)) { toast.error("O líder precisa permitir a criação de tarefas neste ministério."); return }
     try {
       setSaving(true)
       const { data, error } = await withTimeout(supabase.from("lt_tasks").insert({
@@ -60,6 +77,8 @@ export function useTaskStore() {
         recurring: taskData.recurring || null,
         position: taskData.position ?? 0,
         assignee: taskData.assignee || null,
+        assignee_id: taskData.assigneeId,
+        team_ids: taskData.teamIds ?? [],
       }).select().single())
 
       if (error || !data) {
@@ -67,8 +86,8 @@ export function useTaskStore() {
         return
       }
 
-      // Insert initial activity
-      const { data: actRow } = await supabase.from("lt_task_activity").insert({ task_id: data.id, text: "Tarefa criada" }).select().single()
+      // Creation history is atomic, including when assigning someone else.
+      const { data: actRow } = await supabase.from("lt_task_activity").select().eq("task_id", data.id).order("created_at").limit(1).maybeSingle()
       const newTask = mapTask(data, [], [], actRow ? [mapActivity(actRow)] : [], [])
       setTasks(prev => upsertById(prev, newTask))
       return newTask
@@ -81,6 +100,7 @@ export function useTaskStore() {
   }
 
   async function updateTask(id: string, patch: Partial<Task>, activityText?: string): Promise<boolean> {
+    if (!allowEdit(id)) return false
     try {
       setSaving(true)
       const dbPatch: Record<string, unknown> = {}
@@ -93,6 +113,8 @@ export function useTaskStore() {
       if (patch.tags !== undefined) dbPatch.tags = patch.tags
       if (patch.recurring !== undefined) dbPatch.recurring = patch.recurring || null
       if (patch.assignee !== undefined) dbPatch.assignee = patch.assignee || null
+      if (patch.assigneeId !== undefined) dbPatch.assignee_id = patch.assigneeId
+      if (patch.teamIds !== undefined) dbPatch.team_ids = patch.teamIds
 
       if (Object.keys(dbPatch).length > 0) {
         const { error } = await withTimeout(supabase.from("lt_tasks").update(dbPatch).eq("id", id).select("id").single())
@@ -103,7 +125,7 @@ export function useTaskStore() {
       }
 
       let newActivityEntry: ActivityEntry | undefined
-      if (activityText) {
+      if (activityText && patch.assigneeId === undefined && patch.assignee === undefined && patch.teamIds === undefined) {
         const { data, error } = await supabase.from("lt_task_activity").insert({ task_id: id, text: activityText }).select().single()
         if (error) {
           toast.error("Erro ao registrar atividade")
@@ -128,6 +150,7 @@ export function useTaskStore() {
   }
 
   async function deleteTask(id: string) {
+    if (!allowEdit(id)) return
     if (deleteTimers.current.has(id)) return
     setPendingDeletes(prev => new Set(prev).add(id))
     const restore = () => setPendingDeletes(prev => { const next = new Set(prev); next.delete(id); return next })
@@ -146,6 +169,7 @@ export function useTaskStore() {
   }
 
   async function deleteTasks(ids: string[]): Promise<boolean> {
+    if (!ids.every(allowEdit)) return false
     try {
       setSaving(true)
       const { data, error } = await withTimeout(supabase.from("lt_tasks").delete().in("id", ids).select('id'))
@@ -166,13 +190,15 @@ export function useTaskStore() {
   }
 
   async function updateTasks(ids: string[], patch: Partial<Task>): Promise<boolean> {
+    if (!ids.every(allowEdit)) return false
     try {
       setSaving(true)
       const dbPatch: Record<string, unknown> = {}
       if (patch.status !== undefined) dbPatch.status = patch.status
       if (patch.priority !== undefined) dbPatch.priority = patch.priority
       if (Object.keys(dbPatch).length > 0) {
-        const { error } = await withTimeout(supabase.from("lt_tasks").update(dbPatch).in("id", ids))
+        const { data, error } = await withTimeout(supabase.from("lt_tasks").update(dbPatch).in("id", ids).select("id"))
+        if (!error && (data ?? []).length !== new Set(ids).size) { toast.error("Algumas tarefas não puderam ser alteradas"); void reload(); return false }
         if (error) {
           toast.error("Erro ao atualizar tarefas")
           return false
@@ -228,7 +254,7 @@ export function useTaskStore() {
   async function deleteComment(taskId: string, commentId: string) {
     try {
       setSaving(true)
-      const { error } = await withTimeout(supabase.from("lt_task_comments").delete().eq("id", commentId))
+      const { error } = await withTimeout(supabase.from("lt_task_comments").delete().eq("id", commentId).select("id").single())
       if (error) {
         toast.error("Erro ao excluir comentário")
         return
@@ -244,6 +270,7 @@ export function useTaskStore() {
   // ── Checklist ──────────────────────────────────────────────────────────────
 
   async function addChecklistItem(taskId: string, text: string) {
+    if (!allowEdit(taskId)) return
     try {
       setSaving(true)
       const currentLength = tasks.find(t => t.id === taskId)?.checklist.length ?? 0
@@ -262,6 +289,7 @@ export function useTaskStore() {
   }
 
   async function toggleChecklistItem(taskId: string, itemId: string) {
+    if (!allowEdit(taskId)) return
     try {
       setSaving(true)
       const task = tasks.find(t => t.id === taskId)
@@ -269,7 +297,7 @@ export function useTaskStore() {
       if (!task || !item) return
 
       const newDone = !item.done
-      const { error } = await withTimeout(supabase.from("lt_task_checklist").update({ done: newDone }).eq("id", itemId))
+      const { error } = await withTimeout(supabase.from("lt_task_checklist").update({ done: newDone }).eq("id", itemId).select("id").single())
       if (error) {
         toast.error("Erro ao atualizar item")
         return
@@ -290,11 +318,12 @@ export function useTaskStore() {
   }
 
   async function updateChecklistItem(taskId: string, itemId: string, text: string) {
+    if (!allowEdit(taskId)) return
     const trimmed = text.trim()
     if (!trimmed) return
     try {
       setSaving(true)
-      const { error } = await withTimeout(supabase.from("lt_task_checklist").update({ text: trimmed }).eq("id", itemId))
+      const { error } = await withTimeout(supabase.from("lt_task_checklist").update({ text: trimmed }).eq("id", itemId).select("id").single())
       if (error) {
         toast.error("Erro ao atualizar item")
         return
@@ -308,9 +337,10 @@ export function useTaskStore() {
   }
 
   async function deleteChecklistItem(taskId: string, itemId: string) {
+    if (!allowEdit(taskId)) return
     try {
       setSaving(true)
-      const { error } = await withTimeout(supabase.from("lt_task_checklist").delete().eq("id", itemId))
+      const { error } = await withTimeout(supabase.from("lt_task_checklist").delete().eq("id", itemId).select("id").single())
       if (error) {
         toast.error("Erro ao excluir item")
         return
@@ -324,13 +354,14 @@ export function useTaskStore() {
   }
 
   async function reorderChecklist(taskId: string, orderedIds: string[]) {
+    if (!allowEdit(taskId)) return
     const ids = Array.from(new Set(orderedIds))
     try {
       setSaving(true)
     setTasks(prev => prev.map(t => {
       if (t.id !== taskId) return t
       const byId = Object.fromEntries(t.checklist.map(i => [i.id, i]))
-      return { ...t, checklist: Array.from(new Set(orderedIds)).filter(id => byId[id]).map(id => byId[id]) }
+      return { ...t, checklist: ids.filter(id => byId[id]).map(id => byId[id]) }
     }))
     await Promise.all(
       ids.map((id, i) => supabase.from("lt_task_checklist").update({ position: i }).eq("id", id).eq("task_id", taskId).select('id').single().throwOnError())
@@ -346,6 +377,7 @@ export function useTaskStore() {
   // ── Task Links ─────────────────────────────────────────────────────────────
 
   async function addTaskLink(taskId: string, title: string, url: string) {
+    if (!allowEdit(taskId)) return
     try {
       setSaving(true)
       const { data, error } = await withTimeout(supabase.from("lt_task_links").insert({ task_id: taskId, title, url }).select().single())
@@ -363,9 +395,10 @@ export function useTaskStore() {
   }
 
   async function deleteTaskLink(taskId: string, linkId: string) {
+    if (!allowEdit(taskId)) return
     try {
       setSaving(true)
-      const { error } = await withTimeout(supabase.from("lt_task_links").delete().eq("id", linkId))
+      const { error } = await withTimeout(supabase.from("lt_task_links").delete().eq("id", linkId).select("id").single())
       if (error) {
         toast.error("Erro ao excluir link")
         return
@@ -384,8 +417,8 @@ export function useTaskStore() {
     try {
       setSaving(true)
       const task = tasks.find(t => t.id === id)
-      if (!task) {
-        toast.error("Tarefa não encontrada")
+      if (!task || !canCreateTask(task.projectId)) {
+        toast.error("Sem permissão para duplicar esta tarefa")
         return
       }
 
@@ -399,7 +432,8 @@ export function useTaskStore() {
         tags: task.tags,
         recurring: task.recurring || null,
         position: 0,
-        assignee: task.assignee || null,
+        assignee_id: actor.id,
+        team_ids: task.teamIds ?? [],
       }).select().single())
 
       if (error || !data) {
@@ -444,6 +478,7 @@ export function useTaskStore() {
 
   return {
     tasks: tasks.filter(task => !pendingDeletes.has(task.id)), projects, loading, saving, loadError, reloadTasks: reload,
+    creatableMinistries, canEditTask, canCommentTask, canCreateTask,
     reorderTasks,
     addTask, updateTask, deleteTask, deleteTasks, updateTasks, moveTask,
     addComment, deleteComment,

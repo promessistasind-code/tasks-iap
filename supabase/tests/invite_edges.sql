@@ -17,11 +17,15 @@ DO $$ BEGIN
     RAISE EXCEPTION 'Dismissed invite accepted' USING ERRCODE='XX000';
   EXCEPTION WHEN raise_exception THEN NULL; END;
 END $$;
--- Losing inviter access must invalidate an outstanding invitation.
+-- A delegated ministry leader loses both explicit and ministry access.
+RESET ROLE;
+INSERT INTO private.ministry_members(person_id,ministry_id,leader,added_by) SELECT id,'29000000-0000-0000-0000-000000000001',true,user_id FROM private.people WHERE user_id='10000000-0000-0000-0000-000000000002';
+SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000002',true);
 SELECT public.send_project_invite('20000000-0000-0000-0000-000000000001','10000000-0000-0000-0000-000000000003');
 RESET ROLE;
 SELECT set_config('foundation.invite',(SELECT id::text FROM public.lt_notifications WHERE project_id='20000000-0000-0000-0000-000000000001' AND recipient_id='10000000-0000-0000-0000-000000000003' AND status='pending'),true);
+UPDATE private.ministry_members SET active=false WHERE person_id=(SELECT id FROM private.people WHERE user_id='10000000-0000-0000-0000-000000000002');
 DELETE FROM public.lt_project_members WHERE project_id='20000000-0000-0000-0000-000000000001' AND user_id='10000000-0000-0000-0000-000000000002';
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000003',true);

@@ -24,7 +24,7 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**',async route=>{
   if(body.op==='management')return answer([person])
   if(body.op==='catalog')return answer(catalog)
   if(body.op==='myMemberships')return answer(status.isLeader?[{...membership,leader:true,can_add:true,can_edit_roles:true}]:[])
-  if(body.op==='membership'){memberWrites++;assert.equal(body.payload.ministryId,'ministry-1');membership.function_ids=body.payload.functionIds;return answer({ok:true})}
+  if(body.op==='membership'){memberWrites++;assert.equal(body.payload.ministryId,'ministry-1');membership.function_ids=body.payload.functionIds;membership.can_create_projects=body.payload.canCreateProjects;membership.can_create_tasks=body.payload.canCreateTasks;return answer({ok:true})}
   return answer([])
  }
  if(table==='admin-reset-password'){resetCalls++;assert.equal(body.userId,person.userId);return answer({ok:true})}
@@ -53,9 +53,11 @@ try{
  assert.equal(await page.getByRole('switch',{name:'Redefinir senha',exact:true}).isChecked(),false)
  await page.getByRole('button',{name:'Funções e permissões'}).click()
  await page.getByRole('switch',{name:'baixista',exact:true}).check()
+ await page.getByRole('switch',{name:'Pode criar projetos neste ministério',exact:true}).check()
+ await page.getByRole('switch',{name:'Pode criar tarefas neste ministério',exact:true}).check()
  await page.getByRole('button',{name:'Salvar permissões'}).click()
  await page.getByRole('dialog').waitFor({state:'hidden'})
- assert.equal(memberWrites,1);assert.deepEqual(membership.function_ids,['function-1','function-2'])
+ assert.equal(memberWrites,1);assert.equal(membership.can_create_projects,true);assert.equal(membership.can_create_tasks,true);assert.deepEqual(membership.function_ids,['function-1','function-2'])
  await page.getByRole('button',{name:'Convidar usuário',exact:true}).click()
  await page.getByRole('switch',{name:'A pessoa preenche os próprios dados no primeiro acesso'}).check()
  await page.getByLabel('Email',{exact:true}).fill('invite@example.invalid')

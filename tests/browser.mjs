@@ -40,6 +40,7 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
   const answer = (value, status=200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(value), headers: { 'access-control-allow-origin': '*' } })
   if (url.pathname.includes('/auth/')) return answer(url.pathname.endsWith('/user') ? user : {})
   if (table === 'people_portal') return answer(body.op === 'status' ? { ready: true, consented: true, passwordRequired: false, isAdmin: true, isGeneralAdmin: true, isLeader: false, email: user.email, firstName: 'Test', lastName: 'Owner', phone: '11999999999', birthDate: '1990-01-01' } : [])
+  if (table === 'workspace_access') return answer({ministries:[{id:'ministry-1',name:'Celebração'}],projects:[{id:project.id,canManage:true,canCreateTasks:true,eligibleMemberIds:[user.id]}]})
   if (table === 'profiles') return answer(single ? profile : [profile])
   if (table === 'lt_projects') return answer([project])
   if (table === 'lt_notifications' || table === 'lt_notes' || table === 'lt_project_members' || table === 'lt_project_files') return answer([])
@@ -65,6 +66,7 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
     }
     if (method === 'DELETE') { tasks = tasks.filter(t=>!url.search.includes(t.id)); return answer([]) }
   }
+  if (table === 'lt_task_activity' && method === 'GET') return answer(single ? null : [])
   if (['lt_task_comments','lt_task_activity','lt_task_checklist','lt_task_links'].includes(table) && method === 'POST') {
     const rows = (Array.isArray(body) ? body : [body]).map(data => ({ ...data, id: 'child-'+(++sequence), created_at: user.created_at }))
     for (const row of rows) tasks.find(t=>t.id===row.task_id)?.[table].push(row)
@@ -91,7 +93,7 @@ try {
     document.getElementById('root').remove()
     const container = document.createElement('div'); document.body.appendChild(container)
     window.testRoot = createRoot(container)
-    function Harness() { const store = useTaskStore(); React.useEffect(() => { window.testStore=store }); return null }
+    function Harness() { const store = useTaskStore({id:"10000000-0000-0000-0000-000000000001",isAdmin:true}); React.useEffect(() => { window.testStore=store }); return null }
     window.testRoot.render(React.createElement(React.StrictMode, null, React.createElement(Harness)))
   })
   await page.waitForFunction(() => window.testStore?.tasks.length===1 && !window.testStore.loading)

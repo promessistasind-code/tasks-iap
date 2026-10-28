@@ -137,6 +137,8 @@ export function UsersPage() {
       toast.success(success)
       await load()
       await refreshAccess()
+      window.dispatchEvent(new Event("ministry-access-changed"))
+      window.dispatchEvent(new Event("project-access-changed"))
       return true
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não foi possível salvar")

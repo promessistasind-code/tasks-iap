@@ -1,7 +1,7 @@
-import { LayoutDashboard, CheckSquare, FolderKanban, Search, StickyNote, CalendarDays } from "lucide-react"
+import { LayoutDashboard, CheckSquare, FolderKanban, Search, StickyNote, CalendarDays, Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-type Page = "dashboard" | "tasks" | "projects" | "notes" | "calendar" | "users" | "settings"
+import type { Page } from "@/types/navigation"
 
 interface Props {
   page: Page
@@ -10,6 +10,7 @@ interface Props {
 }
 
 const BASE_ITEMS = [
+  { id: "ministries" as Page, label: "Ministérios", Icon: Users },
   { id: "calendar" as Page,  label: "Calendário", Icon: CalendarDays },
   { id: "tasks" as Page,     label: "Tarefas",   Icon: CheckSquare },
   { id: "projects" as Page,  label: "Projetos",  Icon: FolderKanban },

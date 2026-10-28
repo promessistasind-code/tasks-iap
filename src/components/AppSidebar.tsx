@@ -22,18 +22,20 @@ function CollapseButton() {
   )
 }
 
-type Page = "dashboard" | "tasks" | "projects" | "notes" | "calendar" | "users" | "settings"
+import type { Page } from "@/types/navigation"
 
 interface Props {
   page: Page
   onNavigate: (p: Page) => void
+  selectedMinistryId: string | null
+  onSelectMinistry: (id: string | null) => void
   isAdmin: boolean
 }
 
 const ACTIVE_STATUSES: Status[] = ["todo", "in-progress", "review"]
 
-export function AppSidebar({ page, onNavigate, isAdmin }: Props) {
-  const { tasks, projects, activeProjectId, setActiveProjectId } = useApp()
+export function AppSidebar({ page, onNavigate, isAdmin, selectedMinistryId, onSelectMinistry }: Props) {
+  const { tasks, projects, activeProjectId, setActiveProjectId, ministries } = useApp()
 
   const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status)).length
 
@@ -124,6 +126,14 @@ export function AppSidebar({ page, onNavigate, isAdmin }: Props) {
 
         <SidebarSeparator />
 
+        <SidebarGroup>
+          <SidebarGroupLabel>Ministérios</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem><SidebarMenuButton isActive={page === "ministries" && !selectedMinistryId} onClick={() => onSelectMinistry(null)}><Users/><span>Visão dos ministérios</span></SidebarMenuButton></SidebarMenuItem>
+            {ministries.map(m => <SidebarMenuItem key={m.id}><SidebarMenuButton title={m.name} isActive={page === "ministries" && selectedMinistryId === m.id} onClick={() => onSelectMinistry(m.id)}><Users/><span className="truncate">{m.name}</span></SidebarMenuButton></SidebarMenuItem>)}
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarSeparator />
         <SidebarGroup>
           <SidebarGroupLabel>Projetos</SidebarGroupLabel>
           <SidebarMenu>

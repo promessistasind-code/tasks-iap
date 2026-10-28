@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
-    "test:browser": "node tests/browser.mjs && node tests/people-browser.mjs && node tests/task-permissions-browser.mjs",
+    "test:browser": "node tests/browser.mjs && node tests/people-browser.mjs && node tests/task-permissions-browser.mjs && node tests/ministries-browser.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",

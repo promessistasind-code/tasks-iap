@@ -20,12 +20,12 @@ import { ProjectFilesDialog } from "@/components/ProjectFilesDialog"
 
 const emptyForm = { name: "", emoji: "target", color: PROJECT_COLORS[0], ministryId: "" }
 
-export function ProjectsPage() {
+export function ProjectsPage({initialMinistryId}: {initialMinistryId?: string | null}) {
   const { creatableMinistries, projects, tasks, members, addProject, updateProject, deleteProject, sendProjectInvite, cancelInvite } = useApp()
   const { isAdmin, session } = useAuth()
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(() => !!initialMinistryId && creatableMinistries.some(m => m.id === initialMinistryId))
   const [editingProject, setEditingProject] = useState<Project | null>(null)
-  const [form, setForm] = useState(emptyForm)
+  const [form, setForm] = useState(() => ({...emptyForm, ministryId: initialMinistryId ?? ''}))
   const [inviteProject, setInviteProject] = useState<Project | null>(null)
   const [filesProject, setFilesProject] = useState<Project | null>(null)
   const [projectMemberIds, setProjectMemberIds] = useState<string[]>([])

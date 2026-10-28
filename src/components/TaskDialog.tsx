@@ -18,6 +18,7 @@ interface TaskDialogProps {
   onClose: () => void
   task?: Task | null
   defaultStatus?: Status
+  projectScopeId?: string
 }
 
 const emptyForm = {
@@ -32,9 +33,9 @@ const emptyForm = {
   assigneeId: null as string | null,
 }
 
-export function TaskDialog({ open, onClose, task, defaultStatus }: TaskDialogProps) {
+export function TaskDialog({ open, onClose, task, defaultStatus, projectScopeId }: TaskDialogProps) {
   const { addTask, updateTask, projects: allProjects, activeProjectId, tasks, members } = useApp()
-  const projects = allProjects.filter(p => p.canCreateTasks || p.id === task?.projectId)
+  const projects = allProjects.filter(p => (!projectScopeId || p.id === projectScopeId) && (p.canCreateTasks || p.id === task?.projectId))
   const [form, setForm] = useState(emptyForm)
   const [tagInput, setTagInput] = useState("")
 
@@ -59,7 +60,7 @@ export function TaskDialog({ open, onClose, task, defaultStatus }: TaskDialogPro
       setForm({ ...emptyForm, status: defaultStatus ?? "todo", projectId: defaultProject })
     }
     setTagInput("")
-  }, [task, open, defaultStatus, allProjects, activeProjectId])
+  }, [task, open, defaultStatus, allProjects, activeProjectId, projectScopeId])
 
   async function handleSave() {
     if (!form.title.trim()) return

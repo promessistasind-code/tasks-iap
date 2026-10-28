@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/AppSidebar"
 import { BottomNav } from "@/components/BottomNav"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { TasksPage } from "@/pages/TasksPage"
+import { MinistriesPage } from "@/pages/MinistriesPage"
 import { ProjectsPage } from "@/pages/ProjectsPage"
 import { NotesPage } from "@/pages/NotesPage"
 import { CalendarPage } from "@/pages/CalendarPage"
@@ -29,7 +30,7 @@ import { Toaster, toast } from "sonner"
 import { Sun, Moon, Monitor, Search, Loader2, Bot, User, ChevronsUpDown, LogOut } from "lucide-react"
 import { isToday, parseISO } from "date-fns"
 
-type Page = "dashboard" | "tasks" | "projects" | "notes" | "calendar" | "users" | "settings"
+import type { Page } from "@/types/navigation"
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()
@@ -73,13 +74,17 @@ const ADMIN_ONLY_PAGES: Page[] = ["settings"]
 function AppInner() {
   const { loading, saving, setActiveProjectId, tasks, loadError, reloadTasks } = useApp()
   const { isAdmin } = useAuth()
+  const [ministryId, setMinistryId] = useState<string | null>(null)
+  const [newProjectMinistry, setNewProjectMinistry] = useState<string | null>(null)
+  const navigate = (target: Page) => { setNewProjectMinistry(null); setPage(target); if (target === "ministries") setMinistryId(null) }
+  const selectMinistry = (id: string | null) => { setMinistryId(id); setPage("ministries"); setActiveProjectId(null) }
   const [page, setPage] = useState<Page>("dashboard")
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null)
   const detailTask = detailTaskId ? tasks.find(t => t.id === detailTaskId) ?? null : null
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [jarvisOpen, setJarvisOpen] = useState(false)
 
-  const PAGE_LABELS: Record<Page, string> = { dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações" }
+  const PAGE_LABELS: Record<Page, string> = { dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações", ministries: "Ministérios" }
 
   // Sai de uma página restrita a admin se a identidade atual deixar de ser admin
   useEffect(() => {
@@ -108,7 +113,7 @@ function AppInner() {
 
   return (
     <SidebarProvider>
-      <AppSidebar page={page} onNavigate={setPage} isAdmin={isAdmin} />
+      <AppSidebar page={page} onNavigate={navigate} isAdmin={isAdmin} selectedMinistryId={ministryId} onSelectMinistry={selectMinistry} />
       <SidebarInset>
         {/* Header */}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3 md:px-4">
@@ -157,7 +162,8 @@ function AppInner() {
               onNewTaskClose={() => setNewTaskOpen(false)}
             />
           )}
-          {!loading && page === "projects" && <ProjectsPage />}
+          {!loading && page === "projects" && <ProjectsPage initialMinistryId={newProjectMinistry} />}
+          {!loading && page === "ministries" && <MinistriesPage ministryId={ministryId} onSelect={selectMinistry} onOpenProject={id => {setActiveProjectId(id); setPage("tasks")}} onOpenTask={t => setDetailTaskId(t.id)} onManagePeople={() => navigate("users")} onNewProject={id => {setNewProjectMinistry(id); setPage("projects")}} />}
           {!loading && page === "notes" && <NotesPage />}
           {!loading && page === "calendar" && <CalendarPage onOpenTask={t => setDetailTaskId(t.id)} />}
           {!loading && page === "users" && <UsersPage />}
@@ -166,12 +172,12 @@ function AppInner() {
       </SidebarInset>
 
       {/* Mobile bottom nav */}
-      <BottomNav page={page} onNavigate={setPage} onSearch={triggerSearch} />
+      <BottomNav page={page} onNavigate={navigate} onSearch={triggerSearch} />
 
       {/* Global overlays */}
       <TaskDetailSheet task={detailTask} onClose={() => setDetailTaskId(null)} />
       <CommandPalette
-        onNavigate={setPage}
+        onNavigate={navigate}
         onOpenTask={task => { setPage("tasks"); setDetailTaskId(task.id) }}
         onNewTask={() => { setPage("tasks"); setNewTaskOpen(true) }}
         setActiveProjectId={setActiveProjectId}

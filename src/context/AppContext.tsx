@@ -3,12 +3,17 @@ import { useTaskStore } from "@/store/useTaskStore"
 import { useMembersStore } from "@/store/useMembersStore"
 import { useNotificationsStore } from "@/store/useNotificationsStore"
 import { useNotesStore } from "@/store/useNotesStore"
+import { useMinistriesStore, type MinistryWorkspace } from "@/store/useMinistriesStore"
 import { useAuth } from "@/context/AuthContext"
 import type { Task, Project, Status, Member } from "@/types/task"
 import type { AppNotification } from "@/types/notification"
 import type { Note } from "@/types/note"
 
 interface AppContextValue {
+  ministries: MinistryWorkspace[]
+  ministriesLoading: boolean
+  ministriesError: string | null
+  reloadMinistries: () => void
   tasks: Task[]
   projects: Project[]
   creatableMinistries: {id: string; name: string}[]
@@ -67,6 +72,7 @@ const AppContext = createContext<AppContextValue | null>(null)
 export function AppProvider({ children }: { children: ReactNode }) {
   const { session, isAdmin } = useAuth()
   const store = useTaskStore({id: session?.user.id, isAdmin})
+  const ministriesStore = useMinistriesStore(isAdmin)
   const membersStore = useMembersStore()
   const notificationsStore = useNotificationsStore(session?.user?.id ?? null)
   const notesStore = useNotesStore(session?.user?.id ?? null)
@@ -77,6 +83,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   return (
     <AppContext.Provider value={{
       ...store,
+      ...ministriesStore,
       activeProjectId, setActiveProjectId,
       members: membersStore.members,
       membersLoading: membersStore.loading,

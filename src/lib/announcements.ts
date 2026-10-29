@@ -26,7 +26,7 @@ export async function announcementApi<T>(
   if (error) throw new Error(error.message)
   return data as T
 }
-export async function prepareBanner(file: File): Promise<Blob> {
+export async function prepareBanner(file: File, maxWidth = 1920, maxHeight = 1080): Promise<Blob> {
   if (!["image/jpeg", "image/png", "image/webp"].includes(file.type))
     throw new Error("Use uma imagem JPG, PNG ou WebP.")
   if (file.size > 10 * 1024 * 1024)
@@ -35,7 +35,7 @@ export async function prepareBanner(file: File): Promise<Blob> {
   try {
     if (bitmap.width * bitmap.height > 40_000_000)
       throw new Error("Use uma imagem com até 40 megapixels.")
-    const scale = Math.min(1, 1920 / bitmap.width, 1080 / bitmap.height)
+    const scale = Math.min(1, maxWidth / bitmap.width, maxHeight / bitmap.height)
     const canvas = document.createElement("canvas")
     canvas.width = Math.max(1, Math.round(bitmap.width * scale))
     canvas.height = Math.max(1, Math.round(bitmap.height * scale))

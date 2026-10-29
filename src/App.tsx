@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from "@/context/AuthContext"
 import { LoginPage } from "@/pages/LoginPage"
 import { AppSidebar } from "@/components/AppSidebar"
 import { BottomNav } from "@/components/BottomNav"
+import { MediaProvider } from "@/context/MediaContext"
+import { ProfileMediaPage } from "@/pages/ProfileMediaPage"
 import { HomePage } from "@/pages/HomePage"
 import { AnnouncementsPage } from "@/pages/AnnouncementsPage"
 import { DashboardPage } from "@/pages/DashboardPage"
@@ -45,12 +47,12 @@ function ThemeToggle() {
   )
 }
 
-function UserMenu() {
+function UserMenu({onProfile}: {onProfile:()=>void}) {
   const { profile, signOut } = useAuth()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-1.5 h-8 pl-1 pr-1.5 rounded-lg hover:bg-muted transition-colors">
+        <button aria-label="Abrir menu do usuário" className="flex items-center gap-1.5 h-8 pl-1 pr-1.5 rounded-lg hover:bg-muted transition-colors">
           {profile ? <MemberAvatar member={profile} size="xs" /> : <User className="size-4 shrink-0" />}
           <span className="text-xs font-medium hidden sm:inline max-w-[120px] truncate">{profile?.name}</span>
           <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
@@ -63,6 +65,7 @@ function UserMenu() {
             <span className="text-xs text-muted-foreground">{profile?.email}</span>
           </div>
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={onProfile}>Perfil e imagens</DropdownMenuItem>
         <DropdownMenuItem onClick={signOut} className="gap-2 text-muted-foreground">
           <LogOut className="size-3.5" /> Sair
         </DropdownMenuItem>
@@ -86,7 +89,7 @@ function AppInner() {
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [jarvisOpen, setJarvisOpen] = useState(false)
 
-  const PAGE_LABELS: Record<Page, string> = { home: "Início", announcements: "Banners e comunicados", dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações", ministries: "Ministérios" }
+  const PAGE_LABELS: Record<Page, string> = { profile: "Perfil e imagens", home: "Início", announcements: "Banners e comunicados", dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações", ministries: "Ministérios" }
 
   // Sai de uma página restrita a admin se a identidade atual deixar de ser admin
   useEffect(() => {
@@ -139,7 +142,7 @@ function AppInner() {
           </Button>
           <ThemeToggle />
           <NotificationBell />
-          <UserMenu />
+          <UserMenu onProfile={() => setPage("profile")} />
         </header>
 
         {/* Main — extra bottom padding on mobile for BottomNav */}
@@ -156,6 +159,7 @@ function AppInner() {
               <Skeleton className="h-40" />
             </div>
           )}
+          {!loading && page === "profile" && <ProfileMediaPage />}
           {!loading && page === "home" && <HomePage onManage={() => setPage("announcements")} />}
           {!loading && page === "announcements" && <AnnouncementsPage onBack={() => setPage("home")} />}
           {!loading && page === "dashboard" && <DashboardPage />}
@@ -209,9 +213,9 @@ function AuthGate() {
   if (!access.ready) return <AccountOnboarding key={`${session.user.id}-${access.passwordRequired}-${access.consented}`} status={access} />
 
   return (
-    <AppProvider key={session.user.id}>
+    <MediaProvider key={session.user.id}><AppProvider>
       <AppInner />
-    </AppProvider>
+    </AppProvider></MediaProvider>
   )
 }
 

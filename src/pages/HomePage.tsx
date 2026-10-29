@@ -95,15 +95,15 @@ export function HomePage({ onManage }: { onManage: () => void }) {
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
-          ["Total de tarefas", stats.total],
-          ["Concluídas", stats.done],
-          ["Em andamento", stats.inProgress],
-          ["Atrasadas", stats.overdue],
-          ["Concluídas hoje", stats.doneToday],
-        ].map(([label, count]) => (
+          ["Total de tarefas", stats.total, "text-foreground"],
+          ["Concluídas", stats.done, "text-green-500"],
+          ["Em andamento", stats.inProgress, "text-yellow-500"],
+          ["Atrasadas", stats.overdue, "text-red-500"],
+          ["Concluídas hoje", stats.doneToday, "text-primary"],
+        ].map(([label, count, color]) => (
           <div key={label} className="rounded-xl border bg-card p-4">
             <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="mt-2 text-3xl font-semibold">{count}</p>
+            <p className={`mt-2 text-3xl font-semibold ${color}`}>{count}</p>
           </div>
         ))}
       </div>

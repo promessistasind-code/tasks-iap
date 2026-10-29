@@ -4,6 +4,7 @@ import {
   SidebarHeader, SidebarFooter, SidebarSeparator, useSidebar,
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
+import { useMedia } from "@/context/MediaContext"
 import { useApp } from "@/context/AppContext"
 import type { Status } from "@/types/task"
 import { Home, LayoutDashboard, CheckSquare, FolderKanban, StickyNote, LayoutList, ChevronLeft, ChevronRight, Users, Settings, CalendarDays } from "lucide-react"
@@ -37,6 +38,7 @@ const ACTIVE_STATUSES: Status[] = ["todo", "in-progress", "review"]
 export function AppSidebar({ page, onNavigate, isAdmin, selectedMinistryId, onSelectMinistry }: Props) {
   const { tasks, projects, activeProjectId, setActiveProjectId, ministries } = useApp()
 
+  const {brand,urls} = useMedia()
   const activeTasks = tasks.filter(t => ACTIVE_STATUSES.includes(t.status)).length
 
   function handleProjectClick(projectId: string) {
@@ -53,9 +55,9 @@ export function AppSidebar({ page, onNavigate, isAdmin, selectedMinistryId, onSe
       <SidebarHeader>
         <div className="flex flex-col gap-2 px-2 py-1">
           <div className="flex items-center gap-2">
-            <img src="/logo.jpg" alt="" className="size-8 rounded-lg shrink-0" />
+            <img src={brand.logo_path ? urls[brand.logo_path] ?? "/logo.jpg" : "/logo.jpg"} alt="" className="size-8 rounded-lg shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold leading-tight">Promessa Industrial</p>
+              <p className="text-sm font-semibold leading-tight">{brand.name}</p>
               <p className="text-xs text-muted-foreground">Gestão de Projetos</p>
             </div>
           </div>

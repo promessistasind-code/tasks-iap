@@ -1,3 +1,5 @@
+import { useMedia } from "@/context/MediaContext"
+import { useState } from "react"
 import type { Member } from "@/types/task"
 import { cn } from "@/lib/utils"
 
@@ -14,6 +16,10 @@ const SIZE = {
 }
 
 export function MemberAvatar({ member, size = "sm", className }: Props) {
+  const {avatars,urls}=useMedia()
+  const [failed,setFailed]=useState<string|null>(null)
+  const src=urls[avatars[member.id]]
+  if(src && failed!==src) return <img src={src} alt={member.name} title={member.name} onError={()=>setFailed(src)} className={cn("rounded-full object-cover shrink-0",SIZE[size],className)}/>
   return (
     <span
       className={cn("rounded-full flex items-center justify-center font-semibold text-white shrink-0", SIZE[size], className)}

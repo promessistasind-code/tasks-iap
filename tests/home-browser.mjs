@@ -48,7 +48,7 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
   if (table === 'announcement_portal') {
    if(body.op==='list')return answer({canManage:role==='admin',items:banners,nextChangeAt:null})
    if(body.op==='manage')return answer(banners)
-   if(body.op==='editors')return answer([{id:'editor-1',name:'Pessoa Comunicação',enabled:false}])
+   if(body.op==='editors')return answer([{id:'editor-1',name:'Pessoa Comunicação',enabled:grants>0}])
    if(body.op==='grant'){grants++;assert.equal(body.payload.enabled,true);return answer({ok:true})}
    if(body.op==='save'){saves++;assert.equal(body.payload.title,'Título revisado');return answer({id:'banner-1'})}
   }

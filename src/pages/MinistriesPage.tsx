@@ -1,3 +1,4 @@
+import {MinistryEvents} from '@/components/MinistryEvents'
 import {useState} from 'react'
 import {useApp} from '@/context/AppContext'
 import {useAuth} from '@/context/AuthContext'
@@ -46,6 +47,7 @@ export function MinistriesPage({ministryId,onSelect,onOpenProject,onOpenTask,onM
       <div className="flex flex-wrap gap-2">{(isAdmin || ministry.membership?.leader) && <Button variant="outline" onClick={onManagePeople}>Pessoas e permissões</Button>}{canCreateProject && <Button onClick={() => onNewProject(ministry.id)}><Plus className="size-4"/>Novo projeto neste ministério</Button>}</div>
     </div>
     <div className="grid grid-cols-3 gap-3">{[['Projetos',scopedProjects.length],['Tarefas ativas',scopedTasks.filter(t => t.status !== 'done').length],['Concluídas',scopedTasks.filter(t => t.status === 'done').length]].map(([label,count]) => <div key={label} className="rounded-xl border bg-card p-4"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold">{count}</p></div>)}</div>
+    <MinistryEvents key={ministry.id} ministryId={ministry.id}/>
     <section className="space-y-3"><h2 className="text-lg font-semibold">Projetos do ministério</h2>{!scopedProjects.length && <p className="text-sm text-muted-foreground">Nenhum projeto vinculado a este ministério.</p>}
       <div className="grid gap-3 sm:grid-cols-2">{scopedProjects.map(p => <article key={p.id} className="rounded-xl border p-4"><div className="flex items-center gap-2"><ProjectIcon iconKey={p.emoji} className="size-5" style={{color:p.color}}/><h3 className="font-medium">{p.name}</h3>{p.suspended && <span className="text-xs text-muted-foreground">Suspenso</span>}</div><div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => onOpenProject(p.id)}><FolderKanban className="size-4"/>Abrir tarefas</Button>{p.canCreateTasks && <Button size="sm" onClick={() => setTaskProjectId(p.id)}>Criar tarefa</Button>}</div></article>)}</div>
     </section>

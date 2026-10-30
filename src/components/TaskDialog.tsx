@@ -56,7 +56,7 @@ export function TaskDialog({ open, onClose, task, defaultStatus, projectScopeId 
         assigneeId: task.assigneeId ?? null,
       })
     } else {
-      const defaultProject = projects.find(p => p.id === activeProjectId)?.id ?? projects[0]?.id ?? ""
+      const defaultProject = projects.find(p => p.id === (projectScopeId ?? activeProjectId))?.id ?? ""
       setForm({ ...emptyForm, status: defaultStatus ?? "todo", projectId: defaultProject })
     }
     setTagInput("")
@@ -64,10 +64,11 @@ export function TaskDialog({ open, onClose, task, defaultStatus, projectScopeId 
 
   async function handleSave() {
     if (!form.title.trim()) return
+    if (!form.projectId || !projects.some(p => p.id === form.projectId)) { toast.error("Selecione um projeto para esta tarefa."); return }
     const payload = {
       ...form,
       dueDate: form.dueDate || null,
-      projectId: form.projectId || (projects[0]?.id ?? ""),
+      projectId: form.projectId,
     }
     if (task) {
       const ok = await updateTask(task.id, payload)
@@ -145,9 +146,9 @@ export function TaskDialog({ open, onClose, task, defaultStatus, projectScopeId 
 
           {/* Projeto: largura total para não truncar */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs text-muted-foreground">Projeto</label>
+            <label className="text-xs text-muted-foreground">Projeto obrigatório</label>
             <Select value={form.projectId} onValueChange={v => setForm(f => ({ ...f, projectId: v, assignee: null, assigneeId: null }))}>
-              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-label="Projeto obrigatório" aria-required="true" className="w-full"><SelectValue placeholder="Selecione um projeto" /></SelectTrigger>
               <SelectContent>
                 {projects.map(p => (
                   <SelectItem key={p.id} value={p.id}>

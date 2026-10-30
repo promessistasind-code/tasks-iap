@@ -8,6 +8,7 @@ let status={ready:false,passwordRequired:false,resetInProgress:false,consented:f
 const membership={person_id:'person-2',ministry_id:'ministry-1',function_ids:['function-1'],leader:false,can_add:false,can_edit_roles:false,can_remove:false,active:true,added_by:user.id}
 const person={id:'person-2',userId:'60000000-0000-0000-0000-000000000002',firstName:'Maria',lastName:'Silva',email:'maria@example.invalid',phone:'11999999999',birthDate:'1990-01-01',consented:true,isAdmin:false,active:true,memberships:[membership]}
 const catalog=[{id:'ministry-1',name:'Ministério de Celebração',functions:[{id:'function-1',name:'vocalista'},{id:'function-2',name:'baixista'}]}]
+let cleanupCalls=0
 let taskReads=0,resetCalls=0,createCalls=0,memberWrites=0
 const errors=[];page.on('pageerror',e=>errors.push(e.message))
 await page.addInitScript(({user})=>{const payload=btoa(JSON.stringify({sub:user.id,exp:Math.floor(Date.now()/1000)+3600,role:'authenticated'}));localStorage.setItem('sb-hnplfnxlmkdxpvqqrden-auth-token',JSON.stringify({access_token:'eyJhbGciOiJIUzI1NiJ9.'+payload+'.fixture',refresh_token:'fixture',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,token_type:'bearer',user}))},{user})
@@ -17,6 +18,12 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**',async route=>{
  const answer=(data)=>route.fulfill({contentType:'application/json',body:JSON.stringify(data),headers:{'access-control-allow-origin':'*'}})
  if(url.pathname.includes('/auth/')){if(req.method()==='PUT')status.passwordRequired=false;return answer(user)}
  if(table==='profiles')return answer((req.headers().accept??'').includes('vnd.pgrst.object')?{...user,name:'Admin User',color:'#336699',initials:'AU',is_admin:status.isAdmin}:[{...user,name:'Admin User',color:'#336699',initials:'AU'}])
+ if(table==='cleanup_inactive_membership'){
+  assert.equal(status.isGeneralAdmin,true);assert.equal(membership.active,false)
+  if(body.op==='preview')return answer(membership)
+  assert.equal(body.payload.confirmed,true);assert.deepEqual(body.payload.snapshot,membership)
+  cleanupCalls++;person.memberships=[];return answer({ok:true,backupId:123})
+ }
  if(table==='people_portal'){
   if(body.op==='status')return answer(status)
   if(body.op==='complete'){assert.equal(body.payload.consent,true);status={...status,...body.payload,ready:true,consented:true};return answer({ok:true})}
@@ -45,6 +52,7 @@ try{
  await page.getByRole('button',{name:'Continuar',exact:true}).click()
  await page.getByRole('button',{name:'Pessoas e usuários',exact:true}).click()
  await page.getByRole('heading',{name:'Pessoas e usuários'}).waitFor()
+ assert.equal(await page.getByRole('button',{name:'Excluir vínculo inativo',exact:true}).count(),0)
  await page.getByRole('switch',{name:'Redefinir senha',exact:true}).check()
  await page.getByLabel('Senha temporária',{exact:true}).fill('Temporary-test-123!')
  await page.getByRole('button',{name:'Confirmar redefinição'}).click()
@@ -67,9 +75,21 @@ try{
  await page.getByRole('button',{name:'Calendário',exact:true}).click()
  await page.getByText('🎂 Maria Silva',{exact:true}).waitFor()
  assert.ok(!(await page.locator('body').innerText()).includes('1990'))
+ membership.active=false
+ await page.getByRole('button',{name:'Pessoas e usuários',exact:true}).click()
+ await page.getByRole('button',{name:'Excluir vínculo inativo',exact:true}).click()
+ await page.getByRole('button',{name:'Cancelar',exact:true}).click()
+ assert.equal(cleanupCalls,0)
+ await page.getByRole('button',{name:'Excluir vínculo inativo',exact:true}).click()
+ await page.getByRole('button',{name:'Excluir vínculo',exact:true}).click()
+ await page.getByText('Vínculo inativo excluído',{exact:true}).waitFor()
+ await page.getByRole('button',{name:'Funções e permissões'}).waitFor({state:'hidden'})
+ assert.equal(cleanupCalls,1)
+ person.memberships=[membership]
  status={...status,isAdmin:false,isGeneralAdmin:false,isLeader:true}
  await page.reload();await page.getByRole('button',{name:'Pessoas e usuários',exact:true}).click()
  await page.getByRole('heading',{name:'Pessoas e usuários'}).waitFor()
+ assert.equal(await page.getByRole('button',{name:'Excluir vínculo inativo',exact:true}).count(),0)
  assert.equal(await page.getByRole('button',{name:'Convidar usuário',exact:true}).count(),0)
  assert.equal(await page.getByRole('switch',{name:'Administrador',exact:true}).count(),0)
  assert.equal(await page.getByRole('switch',{name:'Redefinir senha',exact:true}).count(),0)
@@ -78,5 +98,5 @@ try{
  await page.getByRole('button',{name:'Close',exact:true}).click()
  await page.setViewportSize({width:390,height:844});await page.getByRole('heading',{name:'Pessoas e usuários'}).waitFor({state:'visible'})
  assert.deepEqual(errors,[])
- console.log(JSON.stringify({passed:true,checks:['consent gates business modules','explicit consent','password reset toggle returns off','multiple ministry functions','administrator invitation','birthday without year','leader UI scope','mobile layout'],resetCalls,createCalls,memberWrites}))
+ console.log(JSON.stringify({passed:true,checks:['consent gates business modules','explicit consent','password reset toggle returns off','multiple ministry functions','administrator invitation','birthday without year','leader UI scope','mobile layout','inactive membership removal','cancel preserves membership','active membership protected','general admin only'],resetCalls,createCalls,memberWrites,cleanupCalls}))
 }finally{await browser.close()}

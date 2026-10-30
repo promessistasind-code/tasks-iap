@@ -1,3 +1,5 @@
+import { useAuth } from "@/context/AuthContext"
+import { supabase } from "@/lib/supabase"
 import { dateInput } from "@/lib/eventDates"
 import { useEffect, useState } from "react"
 import { useApp } from "@/context/AppContext"
@@ -32,6 +34,7 @@ export function EventDialog({
   onClose,
 }: Props) {
   const { ministryCatalog } = useApp()
+  const { access } = useAuth()
   const [detail, setDetail] = useState<EventDetail | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -110,6 +113,22 @@ export function EventDialog({
       setBusy(false)
     }
   }
+  async function deleteEvent() {
+    if(busy || !eventId || !access?.isGeneralAdmin) return
+    setBusy(true)
+    try {
+      const preview=await supabase.rpc('delete_event_safely',{op:'preview',payload:{eventId}})
+      if(preview.error)throw new Error(preview.error.message)
+      const snapshot=preview.data as {event:{title:string};assignments:unknown[]}
+      if(!await showConfirm({title:'Excluir evento?',description:`Excluir “${snapshot.event.title}” e suas ${snapshot.assignments.length} atribuições de escala? O evento sairá do calendário. Uma cópia completa será salva e verificada na auditoria antes da exclusão.`,confirmLabel:'Excluir evento',variant:'destructive'}))return
+      const result=await supabase.rpc('delete_event_safely',{op:'remove',payload:{eventId,snapshot,confirmed:true}})
+      if(result.error)throw new Error(result.error.message)
+      window.dispatchEvent(new Event('events-changed'))
+      toast.success('Evento excluído')
+      onClose()
+    } catch(e) {toast.error(e instanceof Error?e.message:'Não foi possível excluir o evento.')}
+    finally {setBusy(false)}
+  }
   async function save(e: React.FormEvent) {
     e.preventDefault()
     if (new Date(form.endsAt) <= new Date(form.startsAt)) {
@@ -165,7 +184,8 @@ export function EventDialog({
             Evento e escalas vinculadas dos ministérios participantes.
           </DialogDescription>
         </DialogHeader>
-        {error && <p role="alert">{error}</p>}
+        {eventId && detail && access?.isGeneralAdmin && <Button variant="destructive" disabled={busy} onClick={()=>void deleteEvent()}>Excluir evento</Button>}
+      {error && <p role="alert">{error}</p>}
         {eventId && !detail && !error && (
           <p role="status">Carregando evento…</p>
         )}

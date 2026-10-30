@@ -1,3 +1,4 @@
+import { showConfirm } from "@/components/ConfirmDialog"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { supabase } from "@/lib/supabase"
@@ -130,11 +131,26 @@ export function UsersPage() {
       window.removeEventListener("focus", reload)
     }
   }, [load])
+  async function removeInactiveMembership(m: Membership) {
+    if (busy || m.active || !access?.isGeneralAdmin) return
+    await run(async () => {
+      const payload = {personId:m.person_id,ministryId:m.ministry_id}
+      const preview = await supabase.rpc('cleanup_inactive_membership',{op:'preview',payload})
+      if(preview.error) throw new Error(preview.error.message)
+      const person = people.find(p=>p.id===m.person_id)
+      const ministry = catalog.find(c=>c.id===m.ministry_id)
+      const confirmed = await showConfirm({title:'Excluir vínculo inativo?',description:`Remover ${ministry?.name ?? 'este ministério'} da lista de ${person?.firstName ?? 'esta pessoa'}? Uma cópia do vínculo será salva e verificada na auditoria antes da exclusão. O cadastro da pessoa, o ministério e as escalas não serão apagados.`,confirmLabel:'Excluir vínculo',variant:'destructive'})
+      if (!confirmed) return
+      const result=await supabase.rpc('cleanup_inactive_membership',{op:'remove',payload:{...payload,snapshot:preview.data,confirmed:true}})
+      if(result.error)throw new Error(result.error.message)
+      toast.success('Vínculo inativo excluído')
+    }, '')
+  }
   async function run(action: () => Promise<unknown>, success: string) {
     setBusy(true)
     try {
       await action()
-      toast.success(success)
+      if (success) toast.success(success)
       await load()
       await refreshAccess()
       window.dispatchEvent(new Event("ministry-access-changed"))
@@ -387,6 +403,7 @@ export function UsersPage() {
                       >
                         Funções e permissões
                       </Button>
+                      {access?.isGeneralAdmin && !m.active && <Button size="sm" variant="destructive" className="mt-2 sm:mt-0 sm:ml-2" disabled={busy} onClick={()=>void removeInactiveMembership(m)}>Excluir vínculo inativo</Button>}
                     </div>
                   ))}
                 </>

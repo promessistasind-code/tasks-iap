@@ -1,0 +1,11 @@
+# Exclusão de eventos e projeto obrigatório em tarefas
+
+O administrador geral pode abrir um evento e usar Excluir evento. A confirmação identifica o nome e o número de atribuições, incluindo inativas. O servidor exige conta pronta e administrador geral, trava o evento e compara a prévia integral (evento + todas as atribuições) antes de qualquer exclusão. Alteração de horário, escala ou resposta entre a prévia e a confirmação exige nova tentativa. As escritas de escala já usam a mesma trava do evento.
+
+Uma cópia completa é gravada e lida novamente em `private.people_audit`, ação `event.removed`, campo `details.backup`, antes de excluir as atribuições e o evento. Tudo é transacional. A auditoria não expira. Essa cópia fica dentro do banco e permite restaurar evento primeiro e atribuições depois, via `jsonb_populate_record` / `jsonb_populate_recordset`; não é um backup externo do banco. O teste SQL comprovou a restauração exata. Nenhum evento real foi excluído na implementação. Líderes mantêm a opção de cancelar eventos de seu ministério, preservando-os.
+
+Tarefas: `lt_tasks.project_id` passa a NOT NULL (a FK de projeto já existia). Antes da migration, havia zero tarefas sem projeto. Nenhum registro foi remanejado. Na visão Todos, Nova tarefa exige escolha explícita de projeto, sem selecionar automaticamente o primeiro. Ao abrir dentro de um projeto, ele já vem selecionado. O envio por Enter também respeita o campo obrigatório, assim como o store. Todos continua exibindo tarefas dos projetos aos quais a conta tem acesso.
+
+Validação: SQL em transação revertida cobre permissão, confirmação, alteração concorrente da escala, cópia de atribuições inativas, recuperação integral e impossibilidade de inserir tarefa ou editar tarefa removendo seu projeto. Navegador com dados simulados cobre cancelar/confirmar exclusão, ausência do botão para membro, sumiço do evento na lista, Todos com dois projetos, projeto vazio bloqueando botão/Enter, persistência do projeto escolhido e seleção contextual. Regressões de pessoas, tarefas e ministérios também verificadas.
+
+Reversão: frontend anterior e revogação de EXECUTE da RPC desativam a exclusão sem apagar auditoria. A restrição de tarefa pode ser revertida com ALTER COLUMN project_id DROP NOT NULL se houver necessidade explícita. Preservar as cópias na auditoria.

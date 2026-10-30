@@ -5,7 +5,7 @@ const browser = await chromium.launch({ headless: true, ...(process.env.TEST_BRO
 const context = await browser.newContext({ viewport: { width: 1365, height: 900 } })
 const origin = process.env.TEST_URL ?? 'http://127.0.0.1:5173'
 const user = { id: '10000000-0000-0000-0000-000000000001', email: 'test@example.invalid', aud: 'authenticated', role: 'authenticated', created_at: '2026-01-01T00:00:00Z', app_metadata: {}, user_metadata: {} }
-let events=[],assignments=[],eventSaves=0
+let events=[],assignments=[],eventSaves=0,eventDeletes=0
 let role = 'leader'
 let revoked = false, failMinistries = false
 let saves=0, grants=0
@@ -49,6 +49,11 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
   let body;try{body=request.postDataJSON()}catch{body={}}
   const answer = (value, status=200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(value), headers: { 'access-control-allow-origin': '*' } })
   if (url.pathname.includes('/auth/')) return answer(url.pathname.endsWith('/user') ? user : {})
+  if(table==='delete_event_safely') {
+    assert.equal(role,'admin')
+    if(body.op==='preview')return answer({event:events[0],assignments})
+    assert.equal(body.payload.confirmed,true);assert.deepEqual(body.payload.snapshot,{event:events[0],assignments});eventDeletes++;events=[];assignments=[];return answer({ok:true,backupId:1})
+  }
   if(table==='event_portal') {
     const canManage=role==='leader';const own=[{id:'ministry-1',name:'Celebração'}]
     if(body.op==='list')return answer({items:events.map(e=>({...e,canManage})),creatableMinistries:canManage?own:[]})
@@ -159,6 +164,7 @@ try {
  await page.getByText('Celebração · Confirmado',{exact:true}).waitFor()
  await page.getByRole('button',{name:'Recusar',exact:true}).click()
  await page.getByText('Celebração · Recusado',{exact:true}).waitFor()
+ assert.equal(await page.getByRole('button',{name:'Excluir evento',exact:true}).count(),0)
  assert.equal(await page.getByRole('button',{name:'Editar evento',exact:true}).count(),0)
  assert.equal(await page.getByRole('button',{name:'Adicionar pessoa',exact:true}).count(),0)
  await page.getByRole('button',{name:'Close',exact:true}).click()
@@ -172,6 +178,18 @@ try {
  await page.getByRole('button',{name:/Encontro de ministérios/}).click()
  await page.getByText('Celebração · Recusado',{exact:true}).waitFor()
  await page.getByRole('button',{name:'Close',exact:true}).click()
+ role='admin';await page.setViewportSize({width:1365,height:900});await page.reload()
+ await page.getByRole('button',{name:'Calendário',exact:true}).click()
+ await page.getByRole('button',{name:/18:00 · Encontro de ministérios/}).click()
+ await page.getByRole('button',{name:'Excluir evento',exact:true}).click()
+ await page.getByRole('alertdialog').getByRole('button',{name:'Cancelar',exact:true}).click()
+ assert.equal(eventDeletes,0)
+ await page.getByRole('button',{name:'Excluir evento',exact:true}).click()
+ await page.getByRole('alertdialog').getByRole('button',{name:'Excluir evento',exact:true}).click()
+ await page.getByText('Evento excluído',{exact:true}).waitFor()
+ await page.getByRole('dialog').waitFor({state:'hidden'})
+ assert.equal(eventDeletes,1);assert.equal(assignments.length,0)
+ assert.equal(await page.getByRole('button',{name:/18:00 · Encontro de ministérios/}).count(),0)
  assert.deepEqual(errors,[])
  console.log('Events browser passed: creation, sharing, views, filter, assignment, own RSVP, member restrictions, mobile.')
 } finally {await browser.close()}

@@ -63,6 +63,7 @@ export function useTaskStore(actor: {id?: string; isAdmin?: boolean} = {}) {
   // ── Tasks ──────────────────────────────────────────────────────────────────
 
   async function addTask(taskData: Omit<Task, "id" | "createdAt" | "comments" | "checklist" | "activity" | "links">) {
+    if (!taskData.projectId) { toast.error("Selecione um projeto para esta tarefa."); return }
     if (!canCreateTask(taskData.projectId)) { toast.error("O líder precisa permitir a criação de tarefas neste ministério."); return }
     try {
       setSaving(true)
@@ -71,7 +72,7 @@ export function useTaskStore(actor: {id?: string; isAdmin?: boolean} = {}) {
         description: taskData.description,
         status: taskData.status,
         priority: taskData.priority,
-        project_id: taskData.projectId || null,
+        project_id: taskData.projectId,
         due_date: taskData.dueDate || null,
         tags: taskData.tags,
         recurring: taskData.recurring || null,
@@ -101,6 +102,7 @@ export function useTaskStore(actor: {id?: string; isAdmin?: boolean} = {}) {
 
   async function updateTask(id: string, patch: Partial<Task>, activityText?: string): Promise<boolean> {
     if (!allowEdit(id)) return false
+    if (patch.projectId !== undefined && !patch.projectId) { toast.error("Toda tarefa precisa de um projeto."); return false }
     try {
       setSaving(true)
       const dbPatch: Record<string, unknown> = {}
@@ -108,7 +110,7 @@ export function useTaskStore(actor: {id?: string; isAdmin?: boolean} = {}) {
       if (patch.description !== undefined) dbPatch.description = patch.description
       if (patch.status !== undefined) dbPatch.status = patch.status
       if (patch.priority !== undefined) dbPatch.priority = patch.priority
-      if (patch.projectId !== undefined) dbPatch.project_id = patch.projectId || null
+      if (patch.projectId !== undefined) dbPatch.project_id = patch.projectId
       if (patch.dueDate !== undefined) dbPatch.due_date = patch.dueDate || null
       if (patch.tags !== undefined) dbPatch.tags = patch.tags
       if (patch.recurring !== undefined) dbPatch.recurring = patch.recurring || null
@@ -427,7 +429,7 @@ export function useTaskStore(actor: {id?: string; isAdmin?: boolean} = {}) {
         description: task.description,
         status: task.status,
         priority: task.priority,
-        project_id: task.projectId || null,
+        project_id: task.projectId,
         due_date: task.dueDate || null,
         tags: task.tags,
         recurring: task.recurring || null,

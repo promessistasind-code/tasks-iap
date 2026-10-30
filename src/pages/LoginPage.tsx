@@ -29,7 +29,7 @@ export function LoginPage() {
         <div className="relative z-10 flex flex-col gap-6 max-w-md">
           <div className="flex items-center gap-2.5">
             <img src="/logo.jpg" alt="" className="size-10 rounded-xl" />
-            <span className="text-2xl font-bold">Tasks System</span>
+            <span className="text-2xl font-bold">Ind On</span>
           </div>
           <h1 className="text-4xl font-bold leading-tight">
             Gestão de projetos, sem enrolação.
@@ -45,7 +45,7 @@ export function LoginPage() {
         <form onSubmit={handleSubmit} className="w-full max-w-sm flex flex-col gap-6">
           <div className="md:hidden flex items-center gap-2.5 mb-2">
             <img src="/logo.jpg" alt="" className="size-8 rounded-lg" />
-            <span className="text-lg font-bold">Tasks System</span>
+            <span className="text-lg font-bold">Ind On</span>
           </div>
 
           <h2 className="text-2xl font-bold">Que bom te ver.</h2>

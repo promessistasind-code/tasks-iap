@@ -1,7 +1,11 @@
 import { useEffect, useState, useCallback } from "react"
 import { eventApi, type EventFeed } from "@/lib/events"
-export function useEvents(start: string, end: string) {
-  const range = `${start}/${end}`
+export function useEvents(
+  start: string,
+  end: string,
+  assignedMinistry?: string
+) {
+  const range = `${start}/${end}/${assignedMinistry ?? "calendar"}`
   const [state, setState] = useState<{
     range: string
     data: EventFeed
@@ -21,7 +25,11 @@ export function useEvents(start: string, end: string) {
       }
       running = true
       try {
-        const result = await eventApi<EventFeed>("list", { start, end })
+        const result = await eventApi<EventFeed>("list", {
+          start,
+          end,
+          assignedMinistry,
+        })
         if (active)
           setState({
             range,
@@ -55,7 +63,7 @@ export function useEvents(start: string, end: string) {
       window.removeEventListener("focus", refresh)
       window.removeEventListener("events-changed", refresh)
     }
-  }, [start, end, range, revision])
+  }, [start, end, range, revision, assignedMinistry])
   const current = state.range === range
   return {
     items: current ? state.data.items : [],

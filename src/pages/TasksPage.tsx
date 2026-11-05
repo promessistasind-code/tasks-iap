@@ -81,14 +81,6 @@ export function TasksPage({ onOpenTask, newTaskOpen = false, onNewTaskClose }: P
   }
 
   useEffect(() => {
-    const urgent = tasks.filter(t =>
-      t.status !== "done" && t.dueDate &&
-      (isPast(parseISO(t.dueDate)) || isToday(parseISO(t.dueDate)))
-    ).length
-    document.title = urgent > 0 ? `(${urgent}) Tasks System` : "Tasks System"
-  }, [tasks])
-
-  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement).tagName
       if (tag === "INPUT" || tag === "TEXTAREA") return

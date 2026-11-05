@@ -42,3 +42,16 @@ Com acesso direto ao Supabase via conector (SQL + Logs de function), dá pra res
 - **Projeto Supabase**: `bplpowejgqukfsqxfhoj`. O usuário tem várias contas/organizações Supabase diferentes — ao configurar um conector ou CLI, confirmar que está autenticado na conta que realmente é dona desse projeto (fizemos essa descoberta do jeito difícil, via `supabase projects list` não mostrando o projeto certo).
 - **Netlify**: site `lincoln-tasks` (`lincoln-tasks.netlify.app`). Push pra `master` deveria disparar deploy automático via GitHub App — funcionou nas últimas vezes, mas já teve problema de autorização incompleta no passado (resolvido uma vez, mas vale confirmar se ainda está saudável).
 - **Netlify MCP**: existe um conector Netlify já conectado na conta do usuário, mas ele pode estar desligado por chat (`enabledInChat: false`) — precisa ser habilitado nas configurações de conectores de cada conversa nova.
+
+
+## 2026-10-30 — publicação suspensa pelo usuário
+Não fazer deploy na Netlify nem push/update_ref na master remota: créditos de produção esgotaram e usuário retirou site da produção. Última versão remota confirmada: d0839b656bf5b7775ef121574598204df72f30d1. Etapa 5B (recorrência, indisponibilidade, trocas) e ajustes Pastor/Secretaria/lista pessoal estão locais; migrations aplicadas no Supabase oficial. Consultar docs/phase-5-scheduling-workflows.md e docs/pastor-secretaria-personal-events.md. Não confundir banco atualizado com frontend publicado.
+
+## 2026-10-30 — GitHub autorizado; deploy manual pelo usuário
+Usuário autorizou atualizar a master depois de desativar builds automáticos. Painel confirmou Build status: Stopped no projeto atual app-ind-ind (046018df-d723-4014-b036-a7682d652637), equipe Promessistas ind, ligado a promessistasind-code/tasks-iap. Deploy continua reservado ao usuário; não reativar builds nem publicar automaticamente. Alteração de nome Ind On feita pelo usuário foi integrada sem conflito. A restrição anterior de não enviar ao GitHub foi substituída por esta autorização.
+
+## 2026-11-05 — recuperação e repertório
+
+GitHub autorizado pelo usuário; Netlify deve continuar SEM deploy e com builds parados. Repositório oficial: promessistasind-code/tasks-iap, branch master. Supabase oficial: app-iap (hnplfnxlmkdxpvqqrden). Netlify: app-ind-ind. As referências antigas a lincoln-tasks e a outro projeto Supabase acima são históricas e não devem orientar operações atuais.
+
+Código recuperado de agendamento, observadores e eventos pessoais foi incorporado à base remota íntegra, junto com repertório, biblioteca musical e cópia opcional para séries. Consulte docs/event-repertoire.md para migrações aplicadas, validações e pendência da reexecução SQL de observadores. Não confundir backend atualizado com frontend publicado. Não reativar builds automaticamente.

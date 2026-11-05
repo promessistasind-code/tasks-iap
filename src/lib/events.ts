@@ -15,6 +15,9 @@ export interface ChurchEvent {
   cancelled: boolean
   version: number
   canManage: boolean
+  canPastorSchedule?: boolean
+  isAssigned?: boolean
+  series_id?: string | null
 }
 export interface Assignment {
   id: string
@@ -25,6 +28,7 @@ export interface Assignment {
   functionName: string
   response: "pending" | "confirmed" | "declined"
   canManage: boolean
+  canPastorManage?: boolean
   canRespond: boolean
 }
 export interface EventDetail {
@@ -43,6 +47,8 @@ export async function eventApi<T>(
   const { data, error } = await supabase.rpc("event_portal", { op, payload })
   if (error) {
     const messages: Record<string, string> = {
+      "Pessoa indisponível ou escalada em outro evento neste horário.":
+        "Pessoa indisponível ou escalada em outro evento neste horário.",
       "Event changed; reload before saving":
         "Este evento foi alterado. Feche e abra novamente antes de salvar.",
       "Event unavailable":

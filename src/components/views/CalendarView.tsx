@@ -1,3 +1,4 @@
+import { AvailabilityDialog } from "@/components/AvailabilityDialog"
 import { useEffect, useState } from "react"
 import { useEvents } from "@/store/useEvents"
 import { eventFallsOn } from "@/lib/eventDates"
@@ -39,6 +40,7 @@ interface CalendarViewProps {
 
 export function CalendarView({ onOpenTask }: CalendarViewProps) {
   const { tasks, projects, notes, activeProjectId, ministries } = useApp()
+  const [availabilityOpen, setAvailabilityOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [view, setView] = useState<"month" | "week" | "day">("month")
   const [showTasks, setShowTasks] = useState(true)
@@ -230,6 +232,15 @@ export function CalendarView({ onOpenTask }: CalendarViewProps) {
             </Button>
           )}
         </div>
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAvailabilityOpen(true)}
+          >
+            Minhas indisponibilidades
+          </Button>
+        </div>
         {eventFeed.error && (
           <p role="alert" className="text-sm">
             Não foi possível carregar os eventos.{" "}
@@ -419,6 +430,9 @@ export function CalendarView({ onOpenTask }: CalendarViewProps) {
           creatableMinistries={eventFeed.creatableMinistries}
           onClose={() => setSelectedEvent(undefined)}
         />
+      )}
+      {availabilityOpen && (
+        <AvailabilityDialog onClose={() => setAvailabilityOpen(false)} />
       )}
       <ProjectFilesDialog
         project={projects.find((p) => p.id === filesTask?.projectId) ?? null}

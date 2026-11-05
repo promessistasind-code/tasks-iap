@@ -1,0 +1,22 @@
+# Etapa 5B — recorrência, indisponibilidade e trocas
+
+## Séries
+A liderança do ministério responsável cria séries semanais, quinzenais ou mensais a partir de um evento existente, com prévia das datas e confirmação. Quantidade total entre 2 e 26, incluindo o evento inicial. O início mantém o horário local do fuso selecionado pelo dispositivo; a duração é preservada. Meses curtos usam o último dia sem deslocar o dia-base dos meses seguintes. Feriados não são pulados. Não há geração infinita ou cron.
+
+A cópia de atribuições é opcional e inclui somente o ministério responsável. Ministérios convidados organizam as próprias escalas. Novas atribuições começam pendentes; pessoa sem vínculo/função válida, indisponível ou em outro evento conflitante impede a criação inteira da série. A transação não deixa ocorrências parciais. Cada ocorrência é editável/excluível separadamente, conforme permissões existentes. Cancelar esta e próximas preserva histórico e considera o início atual da ocorrência selecionada. Uma ocorrência já vinculada a série não inicia outra série.
+
+## Disponibilidade
+Calendário → Minhas indisponibilidades. Somente a própria pessoa registra ou retira seus períodos. Pode repetir semanalmente, quinzenalmente ou mensalmente até 26 vezes; cada período tem no máximo 31 dias. Períodos são intervalos abertos no fim: terminar exatamente no início de um evento não conflita. Não há campo de motivo pessoal. Líderes veem indicação de conflito nas atribuições que administram, não a lista privada de períodos. Registrar indisponibilidade não remove a escala: volta sua confirmação a pendente e exige revisão. Retirar um período o inativa, preservando auditoria.
+
+Atribuições e confirmações são bloqueadas se houver indisponibilidade ou outro evento sobreposto com participação ativa, pendente/confirmada. Várias funções no mesmo evento são permitidas. Eventos cancelados ou participação recusada não bloqueiam outros eventos. Mudança de horário de evento pode produzir conflito, exibido para revisão; a mudança não remove pessoas silenciosamente.
+
+## Trocas
+A pessoa escalada solicita troca indicando alguém ativo, autorizado, com a mesma função no mesmo ministério e disponível. Solicitação mantém a atribuição original e não confirma o substituto. Há uma solicitação pendente por atribuição. Solicitante pode cancelar; liderança do ministério da atribuição ou administrador geral pode aprovar/recusar. Aprovação revalida versão do evento, vínculos, funções, disponibilidade e duplicidade; em uma transação, inativa a atribuição antiga e cria outra pendente. Não há impersonação de confirmação. Evento encerrado/cancelado não admite novas trocas ou decisões. Solicitações históricas ficam visíveis ao solicitante e à liderança competente. Avisos automáticos e central consolidada de solicitações ficam para a próxima etapa; neste momento, acompanham-se as solicitações no próprio evento.
+
+## Segurança e recuperação
+Tabelas privadas com RLS, sem acesso direto; RPC autenticada e validação de conta pronta, ministério e pessoa no servidor. Operações de agendamento usam uma trava transacional compartilhada para impedir corrida entre indisponibilidade, atribuição, recorrência, troca e exclusão. A exclusão de evento agora copia/verifica também solicitações de troca antes de remover dados. Restauração testada: evento, atribuições e trocas, nessa ordem. Auditoria sem expiração. Desativar a interface não exige remover tabelas; para reverter, preservar registros e recuperar as funções anteriores por migration revisada. Não renomear a função base de volta sem remover a nova wrapper deliberadamente.
+
+## Verificação
+Testes SQL em transações revertidas cobrem fim de mês e horário de verão, série duplicada, pessoa inelegível, indisponibilidade recorrente privada, confirmação bloqueada, troca duplicada, aprovação indevida, revalidação do substituto, troca atômica com nova resposta pendente, cópia integral incluindo atribuições inativas/trocas e recuperação exata, cancelamento de série, criação com cópia de escalas e rollback total em conflito. Regressões de eventos e exclusão/projeto obrigatório passaram.
+
+Navegador com dados simulados cobre registro/retirada de indisponibilidade, solicitação e aprovação de troca, restrições por papel, prévia e confirmação da série, cancelamento e tela móvel. TypeScript e build verificados; lint mantém 44 problemas legados, sem novos erros nestes componentes. Nenhum registro real foi excluído nos testes.

@@ -1,3 +1,6 @@
+import { PastorSchedule } from "@/components/PastorSchedule"
+import { EventRepertoire } from "@/components/EventRepertoire"
+import { EventScheduling } from "@/components/EventScheduling"
 import { useAuth } from "@/context/AuthContext"
 import { supabase } from "@/lib/supabase"
 import { dateInput } from "@/lib/eventDates"
@@ -54,7 +57,7 @@ export function EventDialog({
     [personId, setPersonId] = useState(""),
     [functionId, setFunctionId] = useState(""),
     [candidates, setCandidates] = useState<
-      { id: string; name: string; functionIds: string[] }[]
+      { id: string; name: string; functionIds: string[]; available?: boolean }[]
     >([])
   useEffect(() => {
     if (!eventId) return
@@ -114,20 +117,42 @@ export function EventDialog({
     }
   }
   async function deleteEvent() {
-    if(busy || !eventId || !access?.isGeneralAdmin) return
+    if (busy || !eventId || !access?.isGeneralAdmin) return
     setBusy(true)
     try {
-      const preview=await supabase.rpc('delete_event_safely',{op:'preview',payload:{eventId}})
-      if(preview.error)throw new Error(preview.error.message)
-      const snapshot=preview.data as {event:{title:string};assignments:unknown[]}
-      if(!await showConfirm({title:'Excluir evento?',description:`Excluir “${snapshot.event.title}” e suas ${snapshot.assignments.length} atribuições de escala? O evento sairá do calendário. Uma cópia completa será salva e verificada na auditoria antes da exclusão.`,confirmLabel:'Excluir evento',variant:'destructive'}))return
-      const result=await supabase.rpc('delete_event_safely',{op:'remove',payload:{eventId,snapshot,confirmed:true}})
-      if(result.error)throw new Error(result.error.message)
-      window.dispatchEvent(new Event('events-changed'))
-      toast.success('Evento excluído')
+      const preview = await supabase.rpc("delete_event_safely", {
+        op: "preview",
+        payload: { eventId },
+      })
+      if (preview.error) throw new Error(preview.error.message)
+      const snapshot = preview.data as {
+        event: { title: string }
+        assignments: unknown[]
+      }
+      if (
+        !(await showConfirm({
+          title: "Excluir evento?",
+          description: `Excluir “${snapshot.event.title}” e suas ${snapshot.assignments.length} atribuições de escala? O evento sairá do calendário. Uma cópia completa será salva e verificada na auditoria antes da exclusão.`,
+          confirmLabel: "Excluir evento",
+          variant: "destructive",
+        }))
+      )
+        return
+      const result = await supabase.rpc("delete_event_safely", {
+        op: "remove",
+        payload: { eventId, snapshot, confirmed: true },
+      })
+      if (result.error) throw new Error(result.error.message)
+      window.dispatchEvent(new Event("events-changed"))
+      toast.success("Evento excluído")
       onClose()
-    } catch(e) {toast.error(e instanceof Error?e.message:'Não foi possível excluir o evento.')}
-    finally {setBusy(false)}
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Não foi possível excluir o evento."
+      )
+    } finally {
+      setBusy(false)
+    }
   }
   async function save(e: React.FormEvent) {
     e.preventDefault()
@@ -184,8 +209,16 @@ export function EventDialog({
             Evento e escalas vinculadas dos ministérios participantes.
           </DialogDescription>
         </DialogHeader>
-        {eventId && detail && access?.isGeneralAdmin && <Button variant="destructive" disabled={busy} onClick={()=>void deleteEvent()}>Excluir evento</Button>}
-      {error && <p role="alert">{error}</p>}
+        {eventId && detail && access?.isGeneralAdmin && (
+          <Button
+            variant="destructive"
+            disabled={busy}
+            onClick={() => void deleteEvent()}
+          >
+            Excluir evento
+          </Button>
+        )}
+        {error && <p role="alert">{error}</p>}
         {eventId && !detail && !error && (
           <p role="status">Carregando evento…</p>
         )}
@@ -387,7 +420,7 @@ export function EventDialog({
                           </Button>
                         </>
                       )}
-                      {a.canManage && (
+                      {(a.canManage || a.canPastorManage) && (
                         <Button
                           size="sm"
                           variant="outline"
@@ -399,10 +432,15 @@ export function EventDialog({
                                 description: "O histórico será preservado.",
                               })
                             )
-                              await action("unassign", {
-                                eventId,
-                                assignmentId: a.id,
-                              })
+                              await action(
+                                a.canPastorManage
+                                  ? "pastorUnassign"
+                                  : "unassign",
+                                {
+                                  eventId,
+                                  assignmentId: a.id,
+                                }
+                              )
                           }}
                         >
                           Retirar da escala
@@ -451,8 +489,13 @@ export function EventDialog({
                     >
                       <option value="">Selecione</option>
                       {candidates.map((p) => (
-                        <option key={p.id} value={p.id}>
+                        <option
+                          key={p.id}
+                          value={p.id}
+                          disabled={p.available === false}
+                        >
                           {p.name}
+                          {p.available === false ? " — indisponível" : ""}
                         </option>
                       ))}
                     </select>
@@ -492,6 +535,17 @@ export function EventDialog({
                   </Button>
                 </section>
               )}
+            {detail.event.canPastorSchedule && !detail.event.cancelled && (
+              <PastorSchedule
+                eventId={detail.event.id}
+                onChanged={() => setRevision((r) => r + 1)}
+              />
+            )}
+            <EventRepertoire key={detail.event.id} eventId={detail.event.id} />
+            <EventScheduling
+              detail={detail}
+              onChanged={() => setRevision((r) => r + 1)}
+            />
           </div>
         )}
       </DialogContent>

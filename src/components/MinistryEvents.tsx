@@ -9,11 +9,10 @@ export function MinistryEvents({ ministryId }: { ministryId: string }) {
     [selected, setSelected] = useState<string | null | undefined>(undefined)
   const { items, creatableMinistries, error, reload, loading } = useEvents(
     startOfMonth(month).toISOString(),
-    startOfMonth(addMonths(month, 1)).toISOString()
+    startOfMonth(addMonths(month, 1)).toISOString(),
+    ministryId
   )
-  const events = items.filter(
-    (e) => e.ministry_id === ministryId || e.shared_with.includes(ministryId)
-  )
+  const events = items
   const canCreate = creatableMinistries.some((m) => m.id === ministryId)
   return (
     <section className="space-y-3">
@@ -23,6 +22,10 @@ export function MinistryEvents({ ministryId }: { ministryId: string }) {
           <Button onClick={() => setSelected(null)}>Novo evento</Button>
         )}
       </div>
+      <p className="text-sm text-muted-foreground">
+        Aqui aparecem somente os eventos em que você está escalado neste
+        ministério. Consulte os demais no calendário.
+      </p>
       <div className="flex items-center gap-3">
         <Button
           variant="outline"
@@ -53,7 +56,7 @@ export function MinistryEvents({ ministryId }: { ministryId: string }) {
         </p>
       ) : !events.length ? (
         <p className="text-sm text-muted-foreground">
-          Nenhum evento neste mês.
+          Você não está escalado em eventos neste mês.
         </p>
       ) : (
         events.map((e) => (

@@ -32,7 +32,7 @@ BEGIN
  BEGIN PERFORM public.event_portal('respond',jsonb_build_object('eventId',eid,'assignmentId',aid,'response','confirmed'));RAISE EXCEPTION 'leader impersonated respondent';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
  BEGIN PERFORM public.event_portal('candidates',jsonb_build_object('eventId',eid,'ministryId',mid1));RAISE EXCEPTION 'shared leader read owner candidates';EXCEPTION WHEN insufficient_privilege THEN NULL;END;
  PERFORM public.event_portal('assign',jsonb_build_object('eventId',eid,'ministryId',mid2,'personId','e1000000-0000-0000-0000-000000000004','functionId',current_setting('test.fid2')));
- BEGIN PERFORM public.event_portal('assign',jsonb_build_object('eventId',eid,'ministryId',mid2,'personId','e1000000-0000-0000-0000-000000000004','functionId',current_setting('test.fid1')));RAISE EXCEPTION 'wrong function accepted';EXCEPTION WHEN raise_exception THEN IF SQLERRM='wrong function accepted' THEN RAISE;END IF;END;
+ BEGIN PERFORM public.event_portal('assign',jsonb_build_object('eventId',eid,'ministryId',mid2,'personId','e1000000-0000-0000-0000-000000000004','functionId',current_setting('test.fid1')));RAISE EXCEPTION 'wrong function accepted';EXCEPTION WHEN raise_exception OR insufficient_privilege THEN IF SQLERRM='wrong function accepted' THEN RAISE;END IF;END;
  -- Member may only answer own assignment.
  PERFORM set_config('request.jwt.claim.sub','e1000000-0000-0000-0000-000000000003',true);
  PERFORM public.event_portal('respond',jsonb_build_object('eventId',eid,'assignmentId',aid,'response','confirmed'));

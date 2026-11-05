@@ -173,7 +173,7 @@ export function DashboardPage() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Visão geral das suas tarefas na agência</p>
+        <p className="text-muted-foreground text-sm">Visão geral das tarefas às quais você tem acesso</p>
       </div>
 
       {/* Migration Banner */}

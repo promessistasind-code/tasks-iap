@@ -1,3 +1,5 @@
+import { useAuth } from "@/context/AuthContext"
+import { PersonalScaleReport } from "@/components/PersonalScaleReport"
 import { useApp } from "@/context/AppContext"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -8,7 +10,7 @@ import type { Status, Priority, Task } from "@/types/task"
 import { CheckCircle2, Clock, AlertTriangle, ListTodo, TrendingUp, Flame, Upload, Zap, Users } from "lucide-react"
 import { MemberAvatar } from "@/components/MemberAvatar"
 import { ProjectIcon } from "@/components/ProjectIcon"
-import { isPast, parseISO, format, isThisWeek, isToday } from "date-fns"
+import { parseISO, format, addDays, addWeeks, addMonths, startOfDay, startOfWeek, startOfMonth } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 import { useState } from "react"
@@ -34,7 +36,20 @@ const PRIORITY_COLORS: Record<Priority, string> = {
 }
 
 export function DashboardPage() {
-  const { tasks, projects, addTask, addComment, addChecklistItem, addProject, members } = useApp()
+  const { tasks: allTasks, projects, addTask, addComment, addChecklistItem, addProject, members } = useApp()
+
+  const { session } = useAuth()
+  const [view, setView] = useState<"month" | "week" | "day">("month")
+  const [anchor, setAnchor] = useState(() => new Date())
+  const step = view === "month" ? addMonths : view === "week" ? addWeeks : addDays
+  const start = view === "month" ? startOfMonth(anchor) : view === "week" ? startOfWeek(anchor, {weekStartsOn:0}) : startOfDay(anchor)
+  const end = step(start, 1)
+  const dayKey = (day: Date) => format(day,"yyyy-MM-dd")
+  const from = dayKey(start), until = dayKey(end), today = dayKey(new Date())
+  const tasks = allTasks.filter(t => t.dueDate && t.dueDate >= from && t.dueDate < until)
+  const myProjects = projects.filter(p => session && p.memberIds?.includes(session.user.id))
+  const responsible = members.filter(m => myProjects.some(p => p.createdBy === m.id))
+  const isOverdue = (t: Task) => !!t.dueDate && t.status !== "done" && t.dueDate < today
 
   // Detect localStorage data — tarefas E projetos
   const [localTasks, setLocalTasks] = useState<Task[]>(() => {
@@ -133,16 +148,8 @@ export function DashboardPage() {
   const total = tasks.length
   const done = tasks.filter(t => t.status === "done").length
   const inProgress = tasks.filter(t => t.status === "in-progress").length
-  const overdue = tasks.filter(t => t.dueDate && t.status !== "done" && isPast(parseISO(t.dueDate))).length
-  const dueThisWeek = tasks.filter(t => t.dueDate && t.status !== "done" && isThisWeek(parseISO(t.dueDate))).length
-  const doneToday = tasks.filter(t => {
-    if (t.status !== "done") return false
-    const lastActivity = t.activity?.[t.activity.length - 1]
-    if (!lastActivity) return false
-    // Check if last activity is "Status alterado para Concluído" and is from today
-    if (!lastActivity.text.includes("Concluído")) return false
-    return isToday(parseISO(lastActivity.createdAt))
-  }).length
+  const overdue = tasks.filter(isOverdue).length
+  const completedInPeriod = allTasks.filter(t => t.status === "done" && t.completedAt && parseISO(t.completedAt) >= start && parseISO(t.completedAt) < end).length
   const completionRate = total > 0 ? Math.round((done / total) * 100) : 0
 
   const byStatus = (Object.keys(STATUS_CONFIG) as Status[]).map(s => ({
@@ -176,6 +183,15 @@ export function DashboardPage() {
         <p className="text-muted-foreground text-sm">Visão geral das tarefas às quais você tem acesso</p>
       </div>
 
+      <section aria-label="Período do Dashboard" className="flex flex-wrap items-center gap-2">
+        <h2 className="mr-auto text-lg font-semibold capitalize">{view === "month" ? format(start,"MMMM yyyy",{locale:ptBR}) : view === "day" ? format(start,"dd/MM/yyyy") : format(start,"dd/MM/yyyy")+" a "+format(addDays(end,-1),"dd/MM/yyyy")}</h2>
+        <Button variant="outline" aria-label="Período anterior" onClick={()=>setAnchor(step(anchor,-1))}>‹</Button>
+        <Button variant="outline" onClick={()=>setAnchor(new Date())}>Hoje</Button>
+        <Button variant="outline" aria-label="Próximo período" onClick={()=>setAnchor(step(anchor,1))}>›</Button>
+        <label>Visualização <select aria-label="Visualização" className="rounded border bg-background p-2" value={view} onChange={e=>setView(e.target.value as typeof view)}><option value="month">Mês</option><option value="week">Semana</option><option value="day">Dia</option></select></label>
+      </section>
+      <p className="text-sm text-muted-foreground">Os indicadores de tarefas usam o prazo. O cartão de conclusões usa a data em que a tarefa foi concluída.</p>
+      <PersonalScaleReport key={session?.user.id + from + until} start={start.toISOString()} end={end.toISOString()} />
       {/* Migration Banner */}
       {localTasks.length > 0 && (
         <div className="flex items-center justify-between p-4 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
@@ -197,11 +213,11 @@ export function DashboardPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard icon={<ListTodo className="size-5" />} label="Total de tarefas" value={total} sub="tarefas criadas" color="text-foreground" />
+        <StatCard icon={<ListTodo className="size-5" />} label="Total de tarefas" value={total} sub="com prazo no período" color="text-foreground" />
         <StatCard icon={<CheckCircle2 className="size-5 text-green-500" />} label="Concluídas" value={done} sub={`${completionRate}% de conclusão`} color="text-green-500" />
-        <StatCard icon={<Clock className="size-5 text-yellow-500" />} label="Em andamento" value={inProgress} sub={`${dueThisWeek} vencem esta semana`} color="text-yellow-500" />
+        <StatCard icon={<Clock className="size-5 text-yellow-500" />} label="Em andamento" value={inProgress} sub="com prazo no período" color="text-yellow-500" />
         <StatCard icon={<AlertTriangle className="size-5 text-red-500" />} label="Atrasadas" value={overdue} sub="requerem atenção" color="text-red-500" />
-        <StatCard icon={<Zap className="size-5 text-primary" />} label="Feitas hoje" value={doneToday} sub="desde meia-noite" color="text-primary" />
+        <StatCard icon={<Zap className="size-5 text-primary" />} label="Finalizadas no período" value={completedInPeriod} sub="pela data de conclusão" color="text-primary" />
       </div>
 
       {/* Progress */}
@@ -264,7 +280,7 @@ export function DashboardPage() {
       </div>
 
       {/* Por responsável */}
-      {members.length > 0 && (
+      {responsible.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
@@ -273,11 +289,12 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {members.map(m => {
-                const mt = tasks.filter(t => t.assignee === m.name)
+              {responsible.map(m => {
+                const owned = myProjects.filter(p => p.createdBy === m.id)
+                const mt = tasks.filter(t => owned.some(p => p.id === t.projectId))
                 const mDone = mt.filter(t => t.status === "done").length
                 const mInProgress = mt.filter(t => t.status === "in-progress").length
-                const mOverdue = mt.filter(t => t.dueDate && t.status !== "done" && isPast(parseISO(t.dueDate))).length
+                const mOverdue = mt.filter(isOverdue).length
                 const mPct = mt.length > 0 ? Math.round((mDone / mt.length) * 100) : 0
                 return (
                   <div key={m.id} className="flex flex-col gap-2 p-3 rounded-xl border bg-muted/20">
@@ -285,6 +302,7 @@ export function DashboardPage() {
                       <MemberAvatar member={m} size="md" />
                       <div className="min-w-0">
                         <p className="font-semibold text-sm truncate">{m.name}</p>
+                        <p className="text-xs">{owned.map(p=>p.name).join(", ")}</p>
                         <p className="text-xs text-muted-foreground">{mt.length} tarefa{mt.length !== 1 ? "s" : ""}</p>
                       </div>
                       <span className="ml-auto text-sm font-bold" style={{ color: m.color }}>{mPct}%</span>
@@ -348,7 +366,7 @@ export function DashboardPage() {
             {urgent.map(task => {
               const status = STATUS_CONFIG[task.status]
               const priority = PRIORITY_CONFIG[task.priority]
-              const overdue = task.dueDate && isPast(parseISO(task.dueDate))
+              const overdue = isOverdue(task)
               return (
                 <div key={task.id} className="flex items-center justify-between gap-2 py-1.5 border-b last:border-0">
                   <div className="min-w-0">

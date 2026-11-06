@@ -42,7 +42,8 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
   if (table === 'people_portal') return answer(body.op === 'status' ? { ready: true, consented: true, passwordRequired: false, isAdmin: true, isGeneralAdmin: true, isLeader: false, email: user.email, firstName: 'Test', lastName: 'Owner', phone: '11999999999', birthDate: '1990-01-01' } : [])
   if (table === 'workspace_access') return answer({ministries:[{id:'ministry-1',name:'Celebração'}],projects:[{id:project.id,canManage:true,canCreateTasks:true,eligibleMemberIds:[user.id]}]})
   if (table === 'profiles') return answer(single ? profile : [profile])
-  if (table === 'lt_projects') return answer([project])
+  if (table === 'lt_projects') return answer([{...project,lt_project_members:[{user_id:user.id}]}])
+  if (table === 'my_ministry_scale_counts') return answer([{ministry_id:'m1',ministry_name:'Celebração',events_count:2},{ministry_id:'m2',ministry_name:'Comunicação',events_count:0}])
   if (table === 'lt_notifications' || table === 'lt_notes' || table === 'lt_project_members' || table === 'lt_project_files') return answer([])
   if (table === 'lt_tasks') {
     if (method === 'GET') {
@@ -130,13 +131,26 @@ try {
   assert.equal(taskReads,beforeUnmount,'unmounted hooks must not reload')
 
   // Smoke-test the actual application and each preserved page with fixtures.
-  tasks=[structuredClone(initialTask)]
+  const today=new Date()
+  const localDate=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-')
+  tasks=[{...structuredClone(initialTask),due_date:localDate}]
   await page.goto(origin)
   await page.waitForFunction(()=>document.body.innerText.includes('Promessa Industrial'))
   for(const name of ['Tarefas','Projetos','Notas','Calendário','Dashboard','Pessoas e usuários','Configurações']) {
     await page.getByRole('button',{name:new RegExp('^'+name+'(?:\\s|$)')}).first().click()
     await page.waitForTimeout(150)
     assert.ok(!(await page.locator('body').innerText()).includes('Cannot read'))
+    if(name==='Dashboard'){
+      await page.getByText('Minhas escalas por ministério',{exact:true}).waitFor()
+      await page.getByText('Por responsável',{exact:true}).waitFor()
+      await page.getByLabel('Visualização',{exact:true}).selectOption('day')
+      const count=page.getByText('Total de tarefas',{exact:true}).locator('../..').locator('div.text-3xl')
+      assert.equal(await count.innerText(),'1')
+      await page.getByRole('button',{name:'Próximo período'}).click()
+      assert.equal(await count.innerText(),'0')
+      await page.getByRole('button',{name:'Hoje',exact:true}).click()
+      assert.equal(await count.innerText(),'1')
+    }
   }
   assert.equal(await page.getByText('Canto',{exact:true}).count(),0)
   assert.equal(await page.getByText('Inbox',{exact:true}).count(),0)

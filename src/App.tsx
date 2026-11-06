@@ -1,3 +1,4 @@
+import { RequestsPage } from "@/pages/RequestsPage"
 import { useState, useEffect } from "react"
 import { AppProvider } from "@/context/AppContext"
 import { AuthProvider, useAuth } from "@/context/AuthContext"
@@ -89,7 +90,7 @@ function AppInner() {
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [jarvisOpen, setJarvisOpen] = useState(false)
 
-  const PAGE_LABELS: Record<Page, string> = { profile: "Perfil e imagens", home: "Início", announcements: "Banners e comunicados", dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações", ministries: "Ministérios" }
+  const PAGE_LABELS: Record<Page, string> = { requests: "Solicitações", profile: "Perfil e imagens", home: "Início", announcements: "Banners e comunicados", dashboard: "Dashboard", tasks: "Tarefas", projects: "Projetos", notes: "Notas", calendar: "Calendário", users: "Usuários", settings: "Configurações", ministries: "Ministérios" }
 
   // Sai de uma página restrita a admin se a identidade atual deixar de ser admin
   useEffect(() => {
@@ -159,6 +160,7 @@ function AppInner() {
               <Skeleton className="h-40" />
             </div>
           )}
+          {!loading && page === "requests" && <RequestsPage />}
           {!loading && page === "profile" && <ProfileMediaPage />}
           {!loading && page === "home" && <HomePage onManage={() => setPage("announcements")} />}
           {!loading && page === "announcements" && <AnnouncementsPage onBack={() => setPage("home")} />}

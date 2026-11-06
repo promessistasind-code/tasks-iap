@@ -1,5 +1,13 @@
 # Repertório por evento
 
+## Regras atuais desde 06/11/2026
+
+Celebração e Comunicação compartilham a biblioteca musical. Suas lideranças podem editar músicas nos eventos do próprio ministério. Em Pessoas e usuários, a administração geral pode delegar essa permissão a um membro desses dois ministérios e a escrita de roteiro a membros ou lideranças de qualquer ministério. Salvar o repertório inclui as músicas na biblioteca. As cópias dos eventos são independentes.
+
+A migração `20261106132236_ministry_content_permissions` implementou essa separação. Os testes de Pastor e Secretaria passaram após a aplicação. O texto abaixo documenta a implantação anterior.
+
+## Histórico de 05/11/2026
+
 Estado em 05/11/2026: backend aplicado no Supabase oficial; frontend preparado para GitHub. Nenhum deploy Netlify realizado. Builds da Netlify permanecem parados; publicar o frontend é uma etapa separada.
 
 ## Funções

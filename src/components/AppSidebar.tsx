@@ -72,6 +72,7 @@ export function AppSidebar({ page, onNavigate, isAdmin, selectedMinistryId, onSe
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarMenu>
+            <SidebarMenuItem><SidebarMenuButton isActive={page === "requests"} onClick={() => onNavigate("requests")}><LayoutList/><span>Solicitações</span></SidebarMenuButton></SidebarMenuItem>
             <SidebarMenuItem><SidebarMenuButton isActive={page === "home"} onClick={() => onNavigate("home")}><Home/><span>Início</span></SidebarMenuButton></SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton

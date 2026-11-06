@@ -3,33 +3,36 @@ import { supabase } from "@/lib/supabase"
 
 interface Notice {
   id: string
-  event_id: string
-  title: string
-  starts_at: string
-  ministry: string
-  duty: string
+  kind: "assigned" | "time" | "cancelled" | "reopened" | "approved" | "rejected"
+  event_id: string | null
+  title: string | null
+  starts_at: string | null
+  ends_at?: string | null
+  ministry?: string
+  duty?: string
 }
 
 export function useAssignmentNotices() {
   const [items, setItems] = useState<Notice[]>([])
   const [error, setError] = useState(false)
-  const request = useRef(0)
+  const request = useRef({ sequence: 0 })
   const refresh = useCallback(async (readAssignment?: string) => {
-    const version = ++request.current
+    const version = ++request.current.sequence
     try {
-      const result = await supabase.rpc("assignment_notifications", {
-        read_assignment: readAssignment ?? null,
+      const result = await supabase.rpc("schedule_notifications", {
+        read_notice: readAssignment ?? null,
       })
       if (result.error) throw result.error
-      if (version === request.current) {
+      if (version === request.current.sequence) {
         setItems(result.data ?? [])
         setError(false)
       }
     } catch {
-      if (version === request.current) setError(true)
+      if (version === request.current.sequence) setError(true)
     }
   }, [])
   useEffect(() => {
+    const currentRequest = request.current
     const load = () => { if (!document.hidden) void refresh() }
     load()
     const timer = window.setInterval(load, 60_000)
@@ -37,7 +40,7 @@ export function useAssignmentNotices() {
     window.addEventListener("events-changed", load)
     document.addEventListener("visibilitychange", load)
     return () => {
-      request.current++
+      currentRequest.sequence++
       window.clearInterval(timer)
       window.removeEventListener("focus", load)
       window.removeEventListener("events-changed", load)

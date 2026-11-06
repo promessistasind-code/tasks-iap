@@ -7,6 +7,7 @@ const origin = process.env.TEST_URL ?? 'http://127.0.0.1:5173'
 const user = { id: '10000000-0000-0000-0000-000000000001', email: 'test@example.invalid', aud: 'authenticated', role: 'authenticated', created_at: '2026-01-01T00:00:00Z', app_metadata: {}, user_metadata: {} }
 let events=[],assignments=[],eventSaves=0,eventDeletes=0
 let noticeRead=false
+let centralApproved=false
 let role = 'leader'
 let revoked = false, failMinistries = false
 let saves=0, grants=0
@@ -49,9 +50,14 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
   const single = (request.headers().accept ?? '').includes('vnd.pgrst.object')
   let body;try{body=request.postDataJSON()}catch{body={}}
   const answer = (value, status=200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(value), headers: { 'access-control-allow-origin': '*' } })
-  if(table==='assignment_notifications'){
-    if(body?.read_assignment==='assign-1')noticeRead=true
-    return answer(role==='viewer' && assignments.length && !noticeRead ? [{id:'assign-1',event_id:events[0].id,title:events[0].title,starts_at:events[0].starts_at,ministry:'Celebração',duty:'Vocalista'}] : [])
+  if(table==='schedule_notifications'){
+    if(body?.read_notice==='assign-1')noticeRead=true
+    return answer(role==='viewer' && assignments.length && !noticeRead ? [{id:'assign-1',kind:'time',event_id:events[0].id,title:events[0].title,starts_at:events[0].starts_at,ends_at:events[0].ends_at}] : [])
+  }
+  if(table==='request_center')return answer(body.scope==='review' && role==='admin' && !centralApproved ? [{id:'swap-fixture',kind:'swap',status:'pending',title:'Troca de teste',description:'Vocalista A → Vocalista B',created_at:user.created_at,event_id:'event-1',can_decide:true,can_approve:true}] : [])
+  if(table==='scheduling_portal' && body.op==='decideSwap'){
+    assert.equal(body.payload.swapId,'swap-fixture');assert.equal(body.payload.decision,'approve')
+    centralApproved=true;return answer({ok:true})
   }
   if (url.pathname.includes('/auth/')) return answer(url.pathname.endsWith('/user') ? user : {})
   if(table==='delete_event_safely') {
@@ -162,6 +168,7 @@ try {
  await page.getByRole('button',{name:'Close',exact:true}).click()
  role='viewer';await page.reload()
  await page.getByTitle('Notificações',{exact:true}).click()
+ await page.getByText('Horário alterado · Encontro de ministérios',{exact:true}).waitFor()
  await page.getByRole('button',{name:'Abrir evento',exact:true}).click()
  await page.getByRole('button',{name:'Confirmar presença',exact:true}).waitFor()
  await page.getByRole('button',{name:'Close',exact:true}).click()
@@ -193,6 +200,13 @@ try {
  await page.getByText('Celebração · Recusado',{exact:true}).waitFor()
  await page.getByRole('button',{name:'Close',exact:true}).click()
  role='admin';await page.setViewportSize({width:1365,height:900});await page.reload()
+ await page.getByRole('button',{name:'Solicitações',exact:true}).click()
+ await page.getByText('Você ainda não enviou solicitações.',{exact:true}).waitFor()
+ await page.getByRole('button',{name:'Para decidir',exact:true}).click()
+ await page.getByRole('button',{name:'Aprovar troca',exact:true}).click()
+ await page.getByRole('alertdialog').getByRole('button',{name:'Aprovar troca',exact:true}).click()
+ await page.getByText('Nenhuma solicitação aguardando sua decisão.',{exact:true}).waitFor()
+ assert.equal(centralApproved,true)
  await page.getByRole('button',{name:'Calendário',exact:true}).click()
  await page.getByRole('button',{name:/18:00 · Encontro de ministérios/}).click()
  await page.getByRole('button',{name:'Excluir evento',exact:true}).click()

@@ -10,6 +10,8 @@ import { useState } from "react"
 import { EventDialog } from "@/components/EventDialog"
 import { useAssignmentNotices } from "@/store/useAssignmentNotices"
 
+const labels = {assigned:"Você foi escalado",time:"Horário alterado",cancelled:"Evento cancelado",reopened:"Evento reaberto",approved:"Sua troca foi aprovada",rejected:"Sua troca foi recusada"}
+
 export function NotificationBell() {
   const { notifications, members, projects, acceptInvite, dismissNotification } = useApp()
   const notices = useAssignmentNotices()
@@ -39,10 +41,10 @@ export function NotificationBell() {
         {notices.error && <p role="alert" className="p-2 text-xs">Não foi possível atualizar os avisos de escala. <button onClick={() => void notices.refresh()}>Tentar novamente</button></p>}
         {notices.items.map(n => (
           <div key={n.id} className="space-y-1 border-b p-2">
-            <p className="text-sm font-medium">Você foi escalado · {n.title}</p>
-            <p className="text-xs text-muted-foreground">{n.ministry} · {n.duty} · {new Date(n.starts_at).toLocaleString("pt-BR")}</p>
+            <p className="text-sm font-medium">{labels[n.kind]}{n.title && " · " + n.title}</p>
+            <p className="text-xs text-muted-foreground">{[n.ministry,n.duty,n.starts_at && new Date(n.starts_at).toLocaleString("pt-BR")].filter(Boolean).join(" · ")}{n.kind === "time" && n.ends_at && " até " + new Date(n.ends_at).toLocaleString("pt-BR")}</p>
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => { setOpen(false); setEventId(n.event_id) }}>Abrir evento</Button>
+              {n.event_id && <Button size="sm" onClick={() => { setOpen(false); setEventId(n.event_id) }}>Abrir evento</Button>}
               <Button size="sm" variant="ghost" onClick={() => void notices.refresh(n.id)}>Marcar como lido</Button>
             </div>
           </div>

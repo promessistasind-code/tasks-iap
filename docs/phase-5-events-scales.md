@@ -14,6 +14,6 @@ Validação: testes SQL com usuários fictícios em transação revertida verifi
 
 O aviso informativo de RLS sem políticas nas tabelas privadas é esperado: acesso direto é negado, operações passam pela RPC. Permanece o aviso pré-existente de proteção contra senhas vazadas desativada (ver [Supabase](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)).
 
-Recorrência, indisponibilidade e trocas foram adicionadas na etapa 5B; consulte `phase-5-scheduling-workflows.md`. Notificações automáticas de escala e repertório continuam pendentes.
+Recorrência, indisponibilidade e trocas foram adicionadas na etapa 5B; consulte `phase-5-scheduling-workflows.md`. Consulte [Avisos e solicitações](schedule-requests.md) e [Repertório por evento](event-repertoire.md) para as entregas posteriores.
 
 Reversão: publicar o frontend anterior desativa a interface sem perder os novos registros. Não remover tabelas após uso real sem backup verificado. As migrations são aditivas e não excluem dados dos módulos existentes.

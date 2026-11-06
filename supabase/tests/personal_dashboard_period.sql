@@ -22,6 +22,12 @@ DO $$ DECLARE eid uuid; payload jsonb; rows_seen int; counted int; BEGIN
  IF rows_seen<>2 OR counted<>1 THEN RAISE EXCEPTION 'Incorrect personal totals'; END IF;
  IF EXISTS(SELECT 1 FROM public.my_ministry_scale_counts('2031-06-01T12:00Z','2031-06-02') WHERE events_count<>0) THEN RAISE EXCEPTION 'Period boundary'; END IF;
  PERFORM set_config('request.jwt.claim.sub','e1000000-0000-0000-0000-000000000002',true);
+ SELECT count(*),sum(events_count) INTO rows_seen,counted FROM public.my_ministry_scale_counts('2031-06-01','2031-06-02');
+ IF rows_seen<>1 OR counted<>0 THEN RAISE EXCEPTION 'Single ministry did not show its own zero'; END IF;
+ PERFORM public.event_portal('assign',jsonb_build_object('eventId',eid,'ministryId',current_setting('test.mid2'),'functionId',current_setting('test.fid2'),'personId','e1000000-0000-0000-0000-000000000002'));
+ SELECT count(*),sum(events_count) INTO rows_seen,counted FROM public.my_ministry_scale_counts('2031-06-01','2031-06-02');
+ IF rows_seen<>1 OR counted<>1 THEN RAISE EXCEPTION 'Single ministry count'; END IF;
+ PERFORM set_config('request.jwt.claim.sub','e1000000-0000-0000-0000-000000000005',true);
  IF EXISTS(SELECT 1 FROM public.my_ministry_scale_counts('2031-06-01','2031-06-02')) THEN RAISE EXCEPTION 'Unexpected report'; END IF;
 END $$;
 RESET ROLE;

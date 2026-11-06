@@ -3,7 +3,8 @@ import { supabase } from "@/lib/supabase"
 
 interface Notice {
   id: string
-  kind: "assigned" | "time" | "cancelled" | "reopened" | "approved" | "rejected"
+  kind: "assigned" | "time" | "cancelled" | "reopened" | "approved" | "rejected" | "swap_requested"
+  requester?: string
   event_id: string | null
   title: string | null
   starts_at: string | null
@@ -19,7 +20,7 @@ export function useAssignmentNotices() {
   const refresh = useCallback(async (readAssignment?: string) => {
     const version = ++request.current.sequence
     try {
-      const result = await supabase.rpc("schedule_notifications", {
+      const result = await supabase.rpc("schedule_notifications_v2", {
         read_notice: readAssignment ?? null,
       })
       if (result.error) throw result.error

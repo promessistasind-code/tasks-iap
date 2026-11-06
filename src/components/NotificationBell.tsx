@@ -10,7 +10,7 @@ import { useState } from "react"
 import { EventDialog } from "@/components/EventDialog"
 import { useAssignmentNotices } from "@/store/useAssignmentNotices"
 
-const labels = {assigned:"Você foi escalado",time:"Horário alterado",cancelled:"Evento cancelado",reopened:"Evento reaberto",approved:"Sua troca foi aprovada",rejected:"Sua troca foi recusada"}
+const labels = {assigned:"Você foi escalado",time:"Horário alterado",cancelled:"Evento cancelado",reopened:"Evento reaberto",approved:"Sua troca foi aprovada",rejected:"Sua troca foi recusada",swap_requested:"Solicitação de troca"}
 
 export function NotificationBell() {
   const { notifications, members, projects, acceptInvite, dismissNotification } = useApp()
@@ -41,7 +41,7 @@ export function NotificationBell() {
         {notices.error && <p role="alert" className="p-2 text-xs">Não foi possível atualizar os avisos de escala. <button onClick={() => void notices.refresh()}>Tentar novamente</button></p>}
         {notices.items.map(n => (
           <div key={n.id} className="space-y-1 border-b p-2">
-            <p className="text-sm font-medium">{labels[n.kind]}{n.title && " · " + n.title}</p>
+            <p className="text-sm font-medium">{n.kind === "swap_requested" && n.requester ? n.requester + " solicitou troca" : labels[n.kind]}{n.title && " · " + n.title}</p>
             <p className="text-xs text-muted-foreground">{[n.ministry,n.duty,n.starts_at && new Date(n.starts_at).toLocaleString("pt-BR")].filter(Boolean).join(" · ")}{n.kind === "time" && n.ends_at && " até " + new Date(n.ends_at).toLocaleString("pt-BR")}</p>
             <div className="flex gap-2">
               {n.event_id && <Button size="sm" onClick={() => { setOpen(false); setEventId(n.event_id) }}>Abrir evento</Button>}

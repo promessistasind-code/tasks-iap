@@ -31,6 +31,7 @@ export interface Assignment {
   canManage: boolean
   canPastorManage?: boolean
   canRespond: boolean
+  swapPending?: boolean
 }
 export interface EventDetail {
   event: ChurchEvent

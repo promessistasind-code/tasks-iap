@@ -50,7 +50,8 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
   const single = (request.headers().accept ?? '').includes('vnd.pgrst.object')
   let body;try{body=request.postDataJSON()}catch{body={}}
   const answer = (value, status=200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(value), headers: { 'access-control-allow-origin': '*' } })
-  if(table==='schedule_notifications'){
+  if(table==='schedule_notifications_v2'){
+    if(role==='admin' && !centralApproved)return answer([{id:'swap-fixture',kind:'swap_requested',requester:'Vocalista A',event_id:'event-1',title:'Encontro de ministérios',starts_at:events[0].starts_at}])
     if(body?.read_notice==='assign-1')noticeRead=true
     return answer(role==='viewer' && assignments.length && !noticeRead ? [{id:'assign-1',kind:'time',event_id:events[0].id,title:events[0].title,starts_at:events[0].starts_at,ends_at:events[0].ends_at}] : [])
   }
@@ -68,7 +69,7 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
   if(table==='event_portal') {
     const canManage=role==='leader';const own=[{id:'ministry-1',name:'Celebração'}]
     if(body.op==='list')return answer({items:events.map(e=>({...e,canManage})),creatableMinistries:canManage?own:[]})
-    if(body.op==='detail')return answer({event:{...events.find(e=>e.id===body.payload.eventId),canManage},assignments:assignments.map(a=>({...a,canManage,canRespond:!canManage})),scheduleMinistries:canManage?own:[]})
+    if(body.op==='detail')return answer({event:{...events.find(e=>e.id===body.payload.eventId),canManage},assignments:assignments.map(a=>({...a,canManage,canRespond:!canManage,swapPending:role==='admin' && !centralApproved})),scheduleMinistries:canManage?own:[]})
     if(body.op==='candidates')return answer([{id:'person-1',name:'Test Owner',functionIds:['function-1']}])
     if(body.op==='save') {assert.equal(canManage,true);eventSaves++;const p=body.payload;const e={id:p.id??'event-1',title:p.title,description:p.description,location:p.location,starts_at:p.startsAt,ends_at:p.endsAt,ministry_id:p.ministryId,shared_with:p.sharedWith,cancelled:p.cancelled,version:1};events=[e];return answer({id:e.id})}
     if(body.op==='assign'){assignments=[{id:'assign-1',ministryId:body.payload.ministryId,personId:body.payload.personId,name:'Test Owner',functionId:body.payload.functionId,functionName:'Vocalista',response:'pending'}];return answer({id:body.payload.eventId})}
@@ -183,8 +184,9 @@ try {
  await page.getByRole('button',{name:/18:00 · Encontro de ministérios/}).click()
  await page.getByRole('button',{name:'Confirmar presença',exact:true}).click()
  await page.getByText('Celebração · Confirmado',{exact:true}).waitFor()
- await page.getByRole('button',{name:'Recusar',exact:true}).click()
- await page.getByText('Celebração · Recusado',{exact:true}).waitFor()
+ assert.equal(await page.getByRole('button',{name:'Confirmar presença',exact:true}).count(),0)
+ assert.equal(await page.getByRole('button',{name:'Recusar',exact:true}).count(),0)
+ await page.getByRole('heading',{name:'Solicitar troca',exact:true}).waitFor()
  assert.equal(await page.getByRole('button',{name:'Excluir evento',exact:true}).count(),0)
  assert.equal(await page.getByRole('button',{name:'Editar evento',exact:true}).count(),0)
  assert.equal(await page.getByRole('button',{name:'Adicionar pessoa',exact:true}).count(),0)
@@ -197,9 +199,14 @@ try {
  await page.getByRole('button',{name:/Celebração.*Membro/}).click()
  await page.getByRole('heading',{name:'Eventos e escalas',exact:true}).waitFor()
  await page.getByRole('button',{name:/Encontro de ministérios/}).click()
- await page.getByText('Celebração · Recusado',{exact:true}).waitFor()
+ await page.getByText('Celebração · Confirmado',{exact:true}).waitFor()
  await page.getByRole('button',{name:'Close',exact:true}).click()
  role='admin';await page.setViewportSize({width:1365,height:900});await page.reload()
+ await page.getByTitle('Notificações',{exact:true}).click()
+ await page.getByText('Vocalista A solicitou troca · Encontro de ministérios',{exact:true}).waitFor()
+ await page.getByRole('button',{name:'Abrir evento',exact:true}).click()
+ await page.getByText('solicitou troca',{exact:true}).waitFor()
+ await page.getByRole('button',{name:'Close',exact:true}).click()
  await page.getByRole('button',{name:'Solicitações',exact:true}).click()
  await page.getByText('Você ainda não enviou solicitações.',{exact:true}).waitFor()
  await page.getByRole('button',{name:'Para decidir',exact:true}).click()

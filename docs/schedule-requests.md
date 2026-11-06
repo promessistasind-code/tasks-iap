@@ -1,5 +1,7 @@
 # Avisos de escala e solicitações
 
+Após confirmar presença, o participante pode solicitar troca. Enquanto o pedido estiver pendente, a lista da escala mostra **solicitou troca** ao lado da função para os participantes escalados, as lideranças responsáveis e a administração geral. Quem pode decidir recebe um aviso no sino com o solicitante e um link para o evento. A leitura é individual por responsável e não decide o pedido. Aprovação, recusa ou cancelamento retiram a indicação e o aviso pendente.
+
 O sino reúne convites de projeto, novas escalas, alterações de horário, cancelamentos, reaberturas e decisões de troca. A atualização ocorre ao abrir o sino, voltar à janela e a cada minuto com a página visível. Marcar como lido não confirma presença. Os avisos são internos ao sistema.
 
 Cada participante com vínculo ativo recebe uma atualização por evento mesmo que tenha várias funções. A alteração mais recente substitui a anterior para evitar informações contraditórias. Os avisos de decisão são individuais por pedido. Quando o solicitante perde acesso ao evento, pode consultar o resultado da própria troca, sem detalhes nem link para o evento.

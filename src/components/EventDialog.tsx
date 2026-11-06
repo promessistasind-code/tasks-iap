@@ -383,13 +383,14 @@ export function EventDialog({
                 <div key={a.id} className="space-y-2 rounded border p-3">
                   <p className="font-medium">
                     {a.name} · {a.functionName}
+                    {a.swapPending && <span className="ml-2 inline-block rounded bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-900">solicitou troca</span>}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {ministryName(a.ministryId)} · {responseLabel[a.response]}
                   </p>
                   {!detail.event.cancelled && (
                     <div className="flex flex-wrap gap-2">
-                      {a.canRespond && (
+                      {a.canRespond && a.response !== "confirmed" && (
                         <>
                           <Button
                             size="sm"

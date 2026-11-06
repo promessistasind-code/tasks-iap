@@ -14,6 +14,7 @@ export interface AccountStatus {
   email: string
   isAdmin: boolean
   isGeneralAdmin: boolean
+  isMaster?: boolean
   isLeader: boolean
 }
 export interface Ministry {
@@ -48,6 +49,7 @@ export interface Person {
   birthdayDay?: number
   consented?: boolean
   isAdmin?: boolean
+  isMaster?: boolean
   active?: boolean
   memberships?: Membership[]
 }

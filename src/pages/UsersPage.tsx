@@ -334,7 +334,7 @@ export function UsersPage() {
                       <Toggle
                         label="Conta ativa"
                         checked={!!p.active}
-                        disabled={busy}
+                        disabled={busy || !!p.isMaster}
                         onChange={(active) =>
                           void run(
                             () =>
@@ -346,7 +346,7 @@ export function UsersPage() {
                           )
                         }
                       />
-                      {access?.isGeneralAdmin && (
+                      {access?.isMaster && !p.isMaster ? (
                         <Toggle
                           label="Administrador"
                           checked={!!p.isAdmin}
@@ -362,8 +362,8 @@ export function UsersPage() {
                             )
                           }
                         />
-                      )}
-                      {p.userId !== session?.user.id && (
+                      ) : p.isAdmin ? <p>{p.isMaster ? "Conta master" : "Administrador"}</p> : null}
+                      {!p.isMaster && p.userId !== session?.user.id && (
                         <Toggle
                           label="Redefinir senha"
                           checked={reset?.id === p.id}

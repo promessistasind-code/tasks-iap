@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { useApp } from "@/context/AppContext"
 import type { Task, Status } from "@/types/task"
 import { STATUS_CONFIG, PRIORITY_CONFIG } from "@/types/task"
@@ -38,7 +38,7 @@ function InlineAdd({ status, defaultProjectId }: { status: Status; defaultProjec
 
   async function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
     const text = e.clipboardData.getData("text")
-    const lines = text.split(/\n/).map(l => l.replace(/^[\-\*\•\·\◦\▪\▸\>\d+[\.\)]\s*]+/, "").trim()).filter(Boolean)
+    const lines = text.split(/\n/).map(l => l.replace(/^\s*(?:[-*•·◦▪▸>+]\s*|\d+[.)]\s+)/, "").trim()).filter(Boolean)
     if (lines.length <= 1) return
     e.preventDefault()
     let createdCount = 0
@@ -89,14 +89,12 @@ function InlineAdd({ status, defaultProjectId }: { status: Status; defaultProjec
 function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) => void }) {
   const { canEditTask, moveTask, projects, addChecklistItem, toggleChecklistItem, updateTask } = useApp()
   const [checklistOpen, setChecklistOpen] = useState(false)
-  const [dueDate, setDueDate] = useState(task.dueDate ?? "")
+  const [dateDraft, setDueDate] = useState<string | null>(null)
+  const dueDate = dateDraft ?? task.dueDate ?? ""
   const [newItem, setNewItem] = useState("")
   const newItemRef = useRef<HTMLInputElement>(null)
   const [editingTitle, setEditingTitle] = useState(false)
 
-  useEffect(() => {
-    setDueDate(task.dueDate ?? "")
-  }, [task.dueDate])
   const [titleValue, setTitleValue] = useState(task.title)
   const titleInputRef = useRef<HTMLInputElement>(null)
 
@@ -219,10 +217,11 @@ function KanbanCard({ task, onOpenTask }: { task: Task; onOpenTask: (t: Task) =>
             type="date"
             value={dueDate}
             onChange={e => setDueDate(e.target.value)}
-            onBlur={() => {
+            onBlur={async () => {
               if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return
               const newDate = dueDate || null
-              if (newDate !== task.dueDate) updateTask(task.id, { dueDate: newDate })
+              if (newDate !== task.dueDate) await updateTask(task.id, { dueDate: newDate })
+              setDueDate(current => current === dueDate ? null : current)
             }}
             className={cn(
               "text-xs bg-transparent outline-none cursor-pointer w-[86px]",

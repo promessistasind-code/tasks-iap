@@ -25,7 +25,7 @@ import {
 } from "lucide-react"
 import { formatDistanceToNow, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 import { toast } from "sonner"
 
 // Mapeamento de cor da nota para cor CSS (borda esquerda)
@@ -104,7 +104,7 @@ export function NotesPage() {
     if (deleted) toast.success("Nota excluída")
   }
 
-  function NoteCard({ note }: { note: Note }) {
+  function renderNoteCard(note: Note) {
     const colorCfg = NOTE_COLORS[note.color] || NOTE_COLORS.default
     const listCount = countListItems(note.content)
     const preview = renderPreview(note.content)
@@ -115,7 +115,7 @@ export function NotesPage() {
       .join("\n")
 
     return (
-      <div
+      <div key={note.id}
         className={cn(
           "group relative rounded-xl border border-l-4 p-4 cursor-pointer",
           "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg",
@@ -268,21 +268,17 @@ export function NotesPage() {
     )
   }
 
-  function NotesGrid({ items }: { items: Note[] }) {
+  function renderNotesGrid(items: Note[]) {
     if (viewMode === "list") {
       return (
         <div className="flex flex-col">
-          {items.map(n => (
-            <NoteCard key={n.id} note={n} />
-          ))}
+          {items.map(renderNoteCard)}
         </div>
       )
     }
     return (
       <div className="columns-1 sm:columns-2 lg:columns-3 gap-3">
-        {items.map(n => (
-          <NoteCard key={n.id} note={n} />
-        ))}
+        {items.map(renderNoteCard)}
       </div>
     )
   }
@@ -467,7 +463,7 @@ export function NotesPage() {
               </h2>
               <span className="text-xs text-muted-foreground">({pinned.length})</span>
             </div>
-            <NotesGrid items={pinned} />
+            {renderNotesGrid(pinned)}
           </section>
         )}
 
@@ -482,7 +478,7 @@ export function NotesPage() {
                 <span className="text-xs text-muted-foreground">({others.length})</span>
               </div>
             )}
-            <NotesGrid items={others} />
+            {renderNotesGrid(others)}
           </section>
         )}
 

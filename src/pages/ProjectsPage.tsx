@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ProjectIcon, PROJECT_ICONS } from "@/components/ProjectIcon"
+import { PROJECT_ICONS } from "@/lib/projectIcons"
+import { ProjectIcon } from "@/components/ProjectIcon"
 import { MemberAvatar } from "@/components/MemberAvatar"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 import { Plus, Pencil, Trash2, CheckCircle2, Clock, Users, Check, Clock3, Paperclip, Ban, PlayCircle } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -31,20 +32,24 @@ export function ProjectsPage({initialMinistryId}: {initialMinistryId?: string | 
   const [projectMemberIds, setProjectMemberIds] = useState<string[]>([])
   const [pendingInviteIds, setPendingInviteIds] = useState<string[]>([])
 
-  async function loadInviteState(projectId: string) {
-    const [{ data: memberRows }, { data: pendingRows }] = await Promise.all([
-      supabase.from("lt_project_members").select("user_id").eq("project_id", projectId),
-      supabase.from("lt_notifications").select("recipient_id")
-        .eq("project_id", projectId).eq("type", "project_invite").eq("status", "pending"),
-    ])
-    setProjectMemberIds((memberRows ?? []).map(r => r.user_id as string))
-    setPendingInviteIds((pendingRows ?? []).map(r => r.recipient_id as string))
-  }
-
+  const inviteId = inviteProject?.id
   useEffect(() => {
-    if (!inviteProject) return
-    loadInviteState(inviteProject.id)
-  }, [inviteProject])
+    if (!inviteId) return
+    let active = true
+    async function loadInviteState(projectId: string) {
+      const [{ data: memberRows }, { data: pendingRows }] = await Promise.all([
+        supabase.from("lt_project_members").select("user_id").eq("project_id", projectId),
+        supabase.from("lt_notifications").select("recipient_id")
+          .eq("project_id", projectId).eq("type", "project_invite").eq("status", "pending"),
+      ])
+      if (!active) return
+      setProjectMemberIds((memberRows ?? []).map(r => r.user_id as string))
+      setPendingInviteIds((pendingRows ?? []).map(r => r.recipient_id as string))
+    }
+
+    void loadInviteState(inviteId)
+    return () => { active = false }
+  }, [inviteId])
 
   async function toggleProjectMember(userId: string) {
     if (!inviteProject) return
@@ -161,7 +166,7 @@ export function ProjectsPage({initialMinistryId}: {initialMinistryId?: string | 
                       </div>
                     </div>
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="ghost" size="icon" className="size-7" disabled={!project.canManage} title="Convidar" onClick={() => setInviteProject(project)}>
+                      <Button variant="ghost" size="icon" className="size-7" disabled={!project.canManage} title="Convidar" onClick={() => { setProjectMemberIds([]); setPendingInviteIds([]); setInviteProject(project) }}>
                         <Users className="size-3.5" />
                       </Button>
                       <Button variant="ghost" size="icon" className="size-7" title="Arquivos" onClick={() => setFilesProject(project)}>

@@ -1,5 +1,5 @@
 import { saveContentMembership } from "@/lib/people"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { supabase } from "@/lib/supabase"

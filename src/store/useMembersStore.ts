@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import type { Member } from "@/types/task"
 import { supabase } from "@/lib/supabase"
 
@@ -16,7 +16,7 @@ export function useMembersStore() {
   const [members, setMembers] = useState<Member[]>([])
   const [loading, setLoading] = useState(false)
 
-  async function fetchMembers() {
+  const fetchMembers = useCallback(async () => {
     setLoading(true)
     try {
       const { data } = await supabase.from("profiles").select("id,name,color,initials,is_admin,created_at").order("created_at")
@@ -24,7 +24,7 @@ export function useMembersStore() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   return { members, loading, fetchMembers }
 }

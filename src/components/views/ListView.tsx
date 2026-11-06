@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -29,7 +29,7 @@ import { MemberAvatar } from "@/components/MemberAvatar"
 import { isTaskStale } from "@/lib/utils"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 
 type SortKey = "title" | "status" | "priority" | "dueDate" | "createdAt"
 const PRIORITY_ORDER: Record<Priority, number> = { urgent: 4, high: 3, medium: 2, low: 1, none: 0 }
@@ -65,9 +65,10 @@ function TaskRow({
   dragHandleProps?: Record<string, unknown>
   isDragging?: boolean
 }) {
-  const { canEditTask, projects, deleteTask, moveTask, updateTask, addChecklistItem, toggleChecklistItem, updateChecklistItem, deleteChecklistItem, reorderChecklist, duplicateTask, saving, members } = useApp()
+  const { canEditTask, projects, deleteTask, moveTask, updateTask, addChecklistItem, toggleChecklistItem, updateChecklistItem, deleteChecklistItem, reorderChecklist, duplicateTask, members } = useApp()
   const [savingDate, setSavingDate] = useState(false)
-  const [dueDate, setDueDate] = useState(task.dueDate ?? "")
+  const [dateDraft, setDueDate] = useState<string | null>(null)
+  const dueDate = dateDraft ?? task.dueDate ?? ""
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleValue, setTitleValue] = useState(task.title)
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -95,13 +96,7 @@ function TaskRow({
   const dueToday = task.dueDate && !isDone && isToday(parseISO(task.dueDate))
   const checklist = task.checklist ?? []
 
-  useEffect(() => {
-    setDueDate(task.dueDate ?? "")
-  }, [task.dueDate])
 
-  useEffect(() => {
-    if (!saving) setSavingDate(false)
-  }, [saving])
 
   async function handleDelete() {
     const ok = await showConfirm({ title: `Excluir "${task.title}"?`, description: "Esta ação não pode ser desfeita.", confirmLabel: "Excluir", variant: "destructive" })
@@ -137,9 +132,10 @@ function TaskRow({
   async function handleDueDateBlur() {
     if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return
     const newDate = dueDate || null
-    if (newDate === task.dueDate) return
+    if (newDate === task.dueDate) { setDueDate(null); return }
     setSavingDate(true)
-    await updateTask(task.id, { dueDate: newDate })
+    try { await updateTask(task.id, { dueDate: newDate }) }
+    finally { setSavingDate(false); setDueDate(current => current === dueDate ? null : current) }
   }
 
   function addChecklistItemLocal() {
@@ -437,7 +433,7 @@ function InlineAddRow({ activeProjectId, defaultProjectId }: { activeProjectId: 
     const text = e.clipboardData.getData("text")
     const lines = text
       .split(/\n/)
-      .map(l => l.replace(/^[\-\*\•\·\◦\▪\▸\>\d+[\.\)]\s*]+/, "").trim())
+      .map(l => l.replace(/^\s*(?:[-*•·◦▪▸>+]\s*|\d+[.)]\s+)/, "").trim())
       .filter(Boolean)
 
     if (lines.length <= 1) return
@@ -719,13 +715,13 @@ export function ListView({ onOpenTask, todayFilter = false, noDueDateFilter = fa
       return true
     })
     .sort((a, b) => {
-      let cmp = 0
+      let cmp: number
       if (sortKey === "title") cmp = a.title.localeCompare(b.title)
       else if (sortKey === "status") cmp = STATUS_ORDER[a.status] - STATUS_ORDER[b.status]
       else if (sortKey === "priority") cmp = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
-      else if (sortKey === "dueDate") cmp = (a.dueDate ?? "9999") < (b.dueDate ?? "9999") ? -1 : 1
+      else if (sortKey === "dueDate") cmp = (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")
       else cmp = (a.position ?? 0) - (b.position ?? 0)
-      return sortAsc ? cmp : (sortKey === "createdAt" ? 1 : -cmp)
+      return sortAsc ? cmp : -cmp
     })
 
   const isDefaultSort = sortKey === "createdAt"
@@ -763,7 +759,7 @@ export function ListView({ onOpenTask, todayFilter = false, noDueDateFilter = fa
     if (ok) toast.success("Prioridade atualizada")
   }
 
-  function SortBtn({ k, label }: { k: SortKey; label: string }) {
+  function renderSortButton(k: SortKey, label: string) {
     return (
       <button className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground" onClick={() => { if (sortKey === k) setSortAsc(v => !v); else { setSortKey(k); setSortAsc(true) } }}>
         {label} <ArrowUpDown className={cn("size-3", sortKey === k && "text-primary")} />
@@ -901,11 +897,11 @@ export function ListView({ onOpenTask, todayFilter = false, noDueDateFilter = fa
                     <tr className="border-b bg-muted/30">
                       <th className="w-7 px-2" />
                       <th className="w-8 px-2" />
-                      <th className="text-left px-2 py-2.5"><SortBtn k="title" label="Tarefa" /></th>
-                      <th className="text-left px-1.5 py-2.5 hidden sm:table-cell w-28"><SortBtn k="status" label="Status" /></th>
+                      <th className="text-left px-2 py-2.5">{renderSortButton("title", "Tarefa")}</th>
+                      <th className="text-left px-1.5 py-2.5 hidden sm:table-cell w-28">{renderSortButton("status", "Status")}</th>
                       <th className="px-1.5 py-2.5 hidden sm:table-cell w-8" title="Prioridade"><Flag className="size-3 text-muted-foreground/60" /></th>
                       <th className="text-left px-1.5 py-2.5 hidden md:table-cell w-24 text-xs font-medium text-muted-foreground">Projeto</th>
-                      <th className="text-left px-1.5 py-2.5 hidden lg:table-cell w-24"><SortBtn k="dueDate" label="Prazo" /></th>
+                      <th className="text-left px-1.5 py-2.5 hidden lg:table-cell w-24">{renderSortButton("dueDate", "Prazo")}</th>
                       <th className="px-1.5 py-2.5 hidden sm:table-cell w-9" title="Responsável"><User className="size-3 text-muted-foreground/60" /></th>
                       <th className="w-10" />
                     </tr>

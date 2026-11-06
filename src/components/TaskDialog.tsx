@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -33,18 +33,16 @@ const emptyForm = {
   assigneeId: null as string | null,
 }
 
-export function TaskDialog({ open, onClose, task, defaultStatus, projectScopeId }: TaskDialogProps) {
+export function TaskDialog(props: TaskDialogProps) {
+  return props.open ? <TaskForm key={props.task?.id ?? "new"} {...props} /> : null
+}
+
+function TaskForm({ open, onClose, task, defaultStatus, projectScopeId }: TaskDialogProps) {
   const { addTask, updateTask, projects: allProjects, activeProjectId, tasks, members } = useApp()
   const projects = allProjects.filter(p => (!projectScopeId || p.id === projectScopeId) && (p.canCreateTasks || p.id === task?.projectId))
-  const [form, setForm] = useState(emptyForm)
-  const [tagInput, setTagInput] = useState("")
-
-  // Collect all unique tags from existing tasks for autocomplete
-  const allTags = Array.from(new Set(tasks.flatMap(t => t.tags)))
-
-  useEffect(() => {
+  const [form, setForm] = useState(() => {
     if (task) {
-      setForm({
+      return {
         title: task.title,
         description: task.description,
         status: task.status,
@@ -54,13 +52,17 @@ export function TaskDialog({ open, onClose, task, defaultStatus, projectScopeId 
         tags: task.tags,
         assignee: task.assignee ?? null,
         assigneeId: task.assigneeId ?? null,
-      })
+      }
     } else {
       const defaultProject = projects.find(p => p.id === (projectScopeId ?? activeProjectId))?.id ?? ""
-      setForm({ ...emptyForm, status: defaultStatus ?? "todo", projectId: defaultProject })
+      return { ...emptyForm, status: defaultStatus ?? "todo", projectId: defaultProject }
     }
-    setTagInput("")
-  }, [task, open, defaultStatus, allProjects, activeProjectId, projectScopeId])
+  })
+  const [tagInput, setTagInput] = useState("")
+
+  // Collect all unique tags from existing tasks for autocomplete
+  const allTags = Array.from(new Set(tasks.flatMap(t => t.tags)))
+
 
   async function handleSave() {
     if (!form.title.trim()) return

@@ -1,4 +1,5 @@
 import { PastorSchedule } from "@/components/PastorSchedule"
+import { ScaleSummary } from "@/components/ScaleSummary"
 import { EventRepertoire } from "@/components/EventRepertoire"
 import { EventScheduling } from "@/components/EventScheduling"
 import { useAuth } from "@/context/AuthContext"
@@ -18,7 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 const responseLabel = {
   pending: "Pendente",
   confirmed: "Confirmado",
@@ -374,6 +375,7 @@ export function EventDialog({
             </div>
             <section className="space-y-3">
               <h3 className="font-semibold">Escalas dos ministérios</h3>
+              <ScaleSummary detail={detail} />
               {!detail.assignments.length && (
                 <p className="text-sm text-muted-foreground">
                   Nenhuma pessoa escalada.

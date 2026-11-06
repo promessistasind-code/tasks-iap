@@ -38,21 +38,27 @@ function formatSize(bytes: number): string {
 
 const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.png,.jpg,.jpeg,.gif,.zip"
 
-export function ProjectFilesDialog({ project, onClose, taskId, taskTitle }: Props) {
+export function ProjectFilesDialog(props: Props) {
+  return props.project ? <FileList key={props.project.id + "/" + (props.taskId ?? "")} {...props} /> : null
+}
+
+function FileList({ project, onClose, taskId, taskTitle }: Props) {
   const { members } = useApp()
   const [files, setFiles] = useState<ProjectFile[]>([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const projectId = project?.id
   useEffect(() => {
-    if (!project) return
-    setLoading(true)
-    let query = supabase.from("lt_project_files").select("*").eq("project_id", project.id)
+    if (!projectId) return
+    let active = true
+    let query = supabase.from("lt_project_files").select("*").eq("project_id", projectId)
     query = taskId ? query.eq("task_id", taskId) : query.is("task_id", null)
     query.order("created_at", { ascending: false })
-      .then(({ data }) => { setFiles((data ?? []).map(mapFile)); setLoading(false) })
-  }, [project, taskId])
+      .then(({ data, error }) => { if (active) { if (error) toast.error("Não foi possível carregar os arquivos"); setFiles((data ?? []).map(mapFile)); setLoading(false) } })
+    return () => { active = false }
+  }, [projectId, taskId])
 
   async function handleUpload(fileList: FileList | null) {
     if (!project || !fileList || fileList.length === 0) return

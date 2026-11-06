@@ -2,7 +2,7 @@ import { type ReactNode } from "react"
 import { useApp } from "@/context/AppContext"
 import type { Task } from "@/types/task"
 import { Pencil, Trash2 } from "lucide-react"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 
 interface Props {
   task: Task

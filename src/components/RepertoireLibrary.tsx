@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { libraryApi, type LibrarySong, type Song } from '@/lib/repertoire'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { showConfirm } from '@/components/ConfirmDialog'
+import { showConfirm } from '@/lib/confirm'
 import { toast } from 'sonner'
 
 export function RepertoireLibrary({ eventId, onAdd, disabled }: { eventId: string; onAdd: (song: Song) => void; disabled: boolean }) {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { EventDialog } from "@/components/EventDialog"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 import { schedulingApi } from "@/lib/scheduling"
 import { peopleApi } from "@/lib/people"
 import { supabase } from "@/lib/supabase"

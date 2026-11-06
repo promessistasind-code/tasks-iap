@@ -1,0 +1,36 @@
+import type { LucideIcon } from "lucide-react"
+import {
+  Paintbrush, Megaphone, Lightbulb, Settings2, Users,
+  Rocket, Target, BarChart2, Wrench, Smartphone,
+  Globe, Briefcase, Film, PenLine, Camera,
+  TrendingUp, Zap, Shield, Package, Layers,
+  Code, Star, Coffee, Monitor, FlaskConical,
+} from "lucide-react"
+
+export const PROJECT_ICONS: { key: string; Icon: LucideIcon; label: string }[] = [
+  { key: "paintbrush",  Icon: Paintbrush,   label: "Criação" },
+  { key: "megaphone",   Icon: Megaphone,    label: "Mídia" },
+  { key: "lightbulb",  Icon: Lightbulb,    label: "Estratégia" },
+  { key: "settings2",  Icon: Settings2,    label: "Operações" },
+  { key: "users",      Icon: Users,        label: "Clientes" },
+  { key: "rocket",     Icon: Rocket,       label: "Lançamento" },
+  { key: "target",     Icon: Target,       label: "Meta" },
+  { key: "barchart2",  Icon: BarChart2,    label: "Dados" },
+  { key: "wrench",     Icon: Wrench,       label: "Suporte" },
+  { key: "smartphone", Icon: Smartphone,   label: "Mobile" },
+  { key: "globe",      Icon: Globe,        label: "Web" },
+  { key: "briefcase",  Icon: Briefcase,    label: "Negócios" },
+  { key: "film",       Icon: Film,         label: "Vídeo" },
+  { key: "penline",    Icon: PenLine,      label: "Redação" },
+  { key: "camera",     Icon: Camera,       label: "Foto" },
+  { key: "trendup",    Icon: TrendingUp,   label: "Performance" },
+  { key: "zap",        Icon: Zap,          label: "Urgente" },
+  { key: "shield",     Icon: Shield,       label: "Segurança" },
+  { key: "package",    Icon: Package,      label: "Produto" },
+  { key: "layers",     Icon: Layers,       label: "Camadas" },
+  { key: "code",       Icon: Code,         label: "Dev" },
+  { key: "star",       Icon: Star,         label: "Destaque" },
+  { key: "coffee",     Icon: Coffee,       label: "Reunião" },
+  { key: "monitor",    Icon: Monitor,      label: "Digital" },
+  { key: "flask",      Icon: FlaskConical, label: "Pesquisa" },
+]

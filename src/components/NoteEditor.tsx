@@ -7,7 +7,7 @@ import { NOTE_COLORS } from "@/types/note"
 import { Pin, PinOff, Trash2, X, Tag } from "lucide-react"
 import { formatDistanceToNow, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 import { toast } from "sonner"
 
 interface Props {
@@ -19,23 +19,25 @@ interface Props {
   onTogglePin: (id: string) => Promise<void>
 }
 
-export function NoteEditor({ note, allTags, onClose, onUpdate, onDelete, onTogglePin }: Props) {
-  const [title, setTitle] = useState("")
-  const [content, setContent] = useState("")
+export function NoteEditor(props: Props) {
+  return props.note ? <NoteDraft key={props.note.id} {...props} note={props.note} /> : null
+}
+
+function NoteDraft({ note, allTags, onClose, onUpdate, onDelete, onTogglePin }: Props & {note: Note}) {
+  const [title, setTitle] = useState(note.title)
+  const [content, setContent] = useState(note.content)
   const [tagInput, setTagInput] = useState("")
   const [saving, setSaving] = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const contentRef = useRef<HTMLTextAreaElement>(null)
   const tagInputRef = useRef<HTMLInputElement>(null)
 
+  const focusOnOpen = useRef(!note.title)
   useEffect(() => {
-    if (note) {
-      setTitle(note.title)
-      setContent(note.content)
-      setTagInput("")
-      setTimeout(() => { if (!note.title) contentRef.current?.focus() }, 100)
-    }
-  }, [note?.id])
+    if (!focusOnOpen.current) return
+    const timer = setTimeout(() => contentRef.current?.focus(), 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   function scheduleAutoSave(newTitle: string, newContent: string) {
     if (saveTimer.current) clearTimeout(saveTimer.current)

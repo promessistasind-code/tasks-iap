@@ -1,43 +1,16 @@
-import { useState } from "react"
+import { closeConfirmation as close, getConfirmation, subscribeConfirmation } from "@/lib/confirm"
+import { useSyncExternalStore } from "react"
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/buttonVariants"
 import { cn } from "@/lib/utils"
-
-interface ConfirmOptions {
-  title: string
-  description?: string
-  confirmLabel?: string
-  variant?: "default" | "destructive"
-}
-
-interface ConfirmState extends ConfirmOptions {
-  open: boolean
-  resolve: (value: boolean) => void
-}
-
-let _setState: ((s: ConfirmState | null) => void) | null = null
-
-/** Use instead of window.confirm() — returns a Promise<boolean> */
-export function showConfirm(opts: ConfirmOptions): Promise<boolean> {
-  return new Promise(resolve => {
-    _setState?.({ ...opts, open: true, resolve })
-  })
-}
 
 /** Mount once inside App root */
 export function ConfirmDialogProvider() {
-  const [state, setState] = useState<ConfirmState | null>(null)
-  _setState = setState
-
-  function close(result: boolean) {
-    state?.resolve(result)
-    setState(null)
-  }
-
+  const state = useSyncExternalStore(subscribeConfirmation, getConfirmation)
   if (!state) return null
 
   return (

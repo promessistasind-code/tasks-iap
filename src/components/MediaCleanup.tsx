@@ -8,7 +8,7 @@ import {
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 import { toast } from "sonner"
 type Manifest = { id: string; bucket: string; path: string; sha256: string }[]
 export function MediaCleanup() {

@@ -1,7 +1,8 @@
+import { useSidebar } from "@/hooks/useSidebar"
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem,
-  SidebarHeader, SidebarFooter, SidebarSeparator, useSidebar,
+  SidebarHeader, SidebarFooter, SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
 import { useMedia } from "@/context/MediaContext"

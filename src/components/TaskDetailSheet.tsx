@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +19,7 @@ import { TaskReadOnly } from "@/components/TaskReadOnly"
 import { ChecklistEditor } from "@/components/ChecklistEditor"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 import {
   Trash2, Flag, CheckSquare, MessageSquare,
   Activity, Plus, X, Send, RefreshCw, Copy, Link2,
@@ -39,10 +39,20 @@ export function TaskDetailSheet({ task, onClose }: Props) {
     <Sheet open={!!task} onOpenChange={v => !v && onClose()}>
       <SheetContent className="w-full sm:max-w-[620px] p-0 flex flex-col gap-0" side="right" data-vaul-drawer-direction="right">
         <SheetTitle className="sr-only">Detalhes da tarefa</SheetTitle>
-        {task && (canEditTask(task) ? <TaskDetailContent task={task} onClose={onClose} /> : <TaskReadOnly task={task} />)}
+        {task && (canEditTask(task) ? <TaskDetailContent key={task.id} task={task} onClose={onClose} /> : <TaskReadOnly task={task} />)}
       </SheetContent>
     </Sheet>
   )
+}
+
+function useFieldDraft(source: string) {
+  const [previous, setPrevious] = useState(source)
+  const [value, setValue] = useState(source)
+  if (previous !== source) {
+    setPrevious(source)
+    if (value === previous) setValue(source)
+  }
+  return [value, setValue] as const
 }
 
 // Inner component — task is always Task (never null) here
@@ -56,9 +66,9 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
   } = useApp()
   const { profile, isAdmin } = useAuth()
 
-  const [title, setTitle] = useState(task.title)
-  const [description, setDescription] = useState(task.description)
-  const [dueDate, setDueDate] = useState(task.dueDate ?? "")
+  const [title, setTitle] = useFieldDraft(task.title)
+  const [description, setDescription] = useFieldDraft(task.description)
+  const [dueDate, setDueDate] = useFieldDraft(task.dueDate ?? "")
   const [commentText, setCommentText] = useState("")
   const [newChecklistText, setNewChecklistText] = useState("")
   const [tab, setTab] = useState<"checklist" | "comments" | "activity" | "links">("comments")
@@ -66,12 +76,7 @@ function TaskDetailContent({ task, onClose }: { task: Task; onClose: () => void 
   const [newLinkUrl, setNewLinkUrl] = useState("")
   const commentInputRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => {
-    setTitle(task.title)
-    setDescription(task.description)
-    setDueDate(task.dueDate ?? "")
-    setCommentText("")
-  }, [task.id, task.title, task.description, task.dueDate])
+
 
   const checklist = task.checklist ?? []
   const comments = task.comments ?? []

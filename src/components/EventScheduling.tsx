@@ -7,7 +7,7 @@ import {
   type ScheduleState,
 } from "@/lib/scheduling"
 import type { EventDetail } from "@/lib/events"
-import { showConfirm } from "@/components/ConfirmDialog"
+import { showConfirm } from "@/lib/confirm"
 import { toast } from "sonner"
 import { repertoireApi } from "@/lib/repertoire"
 const labels = {

@@ -1,13 +1,9 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import { useTaskStore } from "@/store/useTaskStore"
-import { useMembersStore } from "@/store/useMembersStore"
-import { useNotificationsStore } from "@/store/useNotificationsStore"
-import { useNotesStore } from "@/store/useNotesStore"
-import { useMinistriesStore, type MinistryWorkspace } from "@/store/useMinistriesStore"
-import { useAuth } from "@/context/AuthContext"
+import { createContext, useContext } from "react"
 import type { Task, Project, Status, Member } from "@/types/task"
 import type { AppNotification } from "@/types/notification"
 import type { Note } from "@/types/note"
+
+import type { MinistryWorkspace } from "@/store/useMinistriesStore"
 
 interface AppContextValue {
   ministries: MinistryWorkspace[]
@@ -68,40 +64,7 @@ interface AppContextValue {
   toggleNotePin: (id: string) => Promise<void>
 }
 
-const AppContext = createContext<AppContextValue | null>(null)
-
-export function AppProvider({ children }: { children: ReactNode }) {
-  const { session, isAdmin } = useAuth()
-  const store = useTaskStore({id: session?.user.id, isAdmin})
-  const ministriesStore = useMinistriesStore(isAdmin)
-  const membersStore = useMembersStore()
-  const notificationsStore = useNotificationsStore(session?.user?.id ?? null)
-  const notesStore = useNotesStore(session?.user?.id ?? null)
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
-
-  useEffect(() => { membersStore.fetchMembers() }, [])
-
-  return (
-    <AppContext.Provider value={{
-      ...store,
-      ...ministriesStore,
-      activeProjectId, setActiveProjectId,
-      members: membersStore.members,
-      membersLoading: membersStore.loading,
-      refetchMembers: membersStore.fetchMembers,
-      ...notificationsStore,
-      notes: notesStore.notes,
-      notesLoading: notesStore.loading,
-      noteTags: notesStore.allTags,
-      createNote: notesStore.createNote,
-      updateNote: notesStore.updateNote,
-      deleteNote: notesStore.deleteNote,
-      toggleNotePin: notesStore.togglePin,
-    }}>
-      {children}
-    </AppContext.Provider>
-  )
-}
+export const AppContext = createContext<AppContextValue | null>(null)
 
 export function useApp() {
   const ctx = useContext(AppContext)

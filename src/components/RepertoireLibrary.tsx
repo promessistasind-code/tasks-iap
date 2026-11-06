@@ -22,7 +22,7 @@ export function RepertoireLibrary({ eventId, onAdd, disabled }: { eventId: strin
     try { await libraryApi('archive', eventId, { id: item.id }); refresh() } catch (err) { toast.error(err instanceof Error ? err.message : 'Não foi possível arquivar') } finally { setBusy(false) }
   }
   return <section aria-label="Biblioteca de músicas" className="space-y-3 rounded border p-3">
-    <h4 className="font-medium">Biblioteca do ministério</h4>
+    <h4 className="font-medium">Biblioteca de Celebração e Comunicação</h4>
     <p className="text-xs text-muted-foreground">Adicionar cria uma cópia no repertório em edição. Ajustes no evento não alteram a biblioteca.</p>
     <div className="flex gap-2"><Input aria-label="Buscar música" maxLength={200} value={search} onChange={e => setSearch(e.target.value)} /><Button disabled={loading || busy || disabled} onClick={() => { setLoading(true); setQuery(search); setOffset(0); setRevision(r => r + 1) }}>Buscar</Button></div>
     {loading ? <p role="status">Carregando músicas…</p> : error ? <div role="alert">{error}<Button onClick={refresh}>Tentar novamente</Button></div> : <>

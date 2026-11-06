@@ -1,3 +1,4 @@
+import { saveContentMembership } from "@/lib/people"
 import { showConfirm } from "@/components/ConfirmDialog"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
@@ -673,6 +674,13 @@ export function UsersPage() {
                   />
                 ))}
               <hr />
+              {access?.isGeneralAdmin && <>
+                {["Ministério de Celebração", "Ministério de Comunicação"].includes(catalog.find(m => m.id === membership.ministry_id)?.name ?? "") && (
+                  membership.leader ? <p>Liderança com acesso ao repertório musical.</p> :
+                  <Toggle label="Pode criar e editar repertório" checked={!!membership.can_edit_repertoire} onChange={can_edit_repertoire => setMembership({ ...membership, can_edit_repertoire })} />
+                )}
+                <Toggle label="Pode criar e editar roteiro" checked={!!membership.can_edit_script} onChange={can_edit_script => setMembership({ ...membership, can_edit_script })} />
+              </>}
               <Toggle label="Pode criar projetos neste ministério" checked={!!membership.can_create_projects} onChange={(can_create_projects) => setMembership({...membership, can_create_projects})} />
               <Toggle label="Pode criar tarefas neste ministério" checked={!!membership.can_create_tasks} onChange={(can_create_tasks) => setMembership({...membership, can_create_tasks})} />
               <Toggle
@@ -718,7 +726,7 @@ export function UsersPage() {
                   void (async () => {
                     if (
                       await run(
-                        () =>
+                        () => access?.isGeneralAdmin ? saveContentMembership(membership) :
                           peopleApi(
                             "membership",
                             membershipPayload(membership)

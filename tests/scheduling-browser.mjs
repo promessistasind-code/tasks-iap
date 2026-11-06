@@ -52,7 +52,7 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**', async route => {
   let body;try{body=request.postDataJSON()}catch{body={}}
   const answer = (value, status=200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(value), headers: { 'access-control-allow-origin': '*' } })
   if (url.pathname.includes('/auth/')) return answer(url.pathname.endsWith('/user') ? user : {})
-  if(table==='repertoire_portal') return answer({enabled:true,canConfigure:role==='leader',canEdit:role==='leader',version:7,songs:[],script:'Roteiro'})
+  if(table==='repertoire_portal') return answer({enabled:true,canEditScript:role==='leader',canEditSongs:role==='leader',canEdit:role==='leader',version:7,songs:[],script:'Roteiro'})
   if(table==='scheduling_portal') {
     const p=body.payload
     if(body.op==='availabilityList')return answer(periods)

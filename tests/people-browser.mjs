@@ -24,7 +24,8 @@ await page.route('**/hnplfnxlmkdxpvqqrden.supabase.co/**',async route=>{
   assert.equal(body.payload.confirmed,true);assert.deepEqual(body.payload.snapshot,membership)
   cleanupCalls++;person.memberships=[];return answer({ok:true,backupId:123})
  }
- if(table==='people_portal'){
+ if(table==='save_content_membership'){assert.equal(body.payload.editScript,true);body.op='membership'}
+ if(table==='people_portal'||table==='save_content_membership'){
   if(body.op==='status')return answer(status)
   if(body.op==='complete'){assert.equal(body.payload.consent,true);status={...status,...body.payload,ready:true,consented:true};return answer({ok:true})}
   if(body.op==='directory')return answer([{...person,birthDate:undefined,birthdayMonth:new Date().getMonth()+1,birthdayDay:new Date().getDate()}])
@@ -63,6 +64,7 @@ try{
  await page.getByRole('switch',{name:'baixista',exact:true}).check()
  await page.getByRole('switch',{name:'Pode criar projetos neste ministério',exact:true}).check()
  await page.getByRole('switch',{name:'Pode criar tarefas neste ministério',exact:true}).check()
+ await page.getByRole('switch',{name:'Pode criar e editar roteiro'}).check()
  await page.getByRole('button',{name:'Salvar permissões'}).click()
  await page.getByRole('dialog').waitFor({state:'hidden'})
  assert.equal(memberWrites,1);assert.equal(membership.can_create_projects,true);assert.equal(membership.can_create_tasks,true);assert.deepEqual(membership.function_ids,['function-1','function-2'])

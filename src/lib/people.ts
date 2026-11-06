@@ -30,6 +30,8 @@ export interface Membership {
   can_edit_roles: boolean
   can_remove: boolean
   can_create_projects?: boolean
+  can_edit_repertoire?: boolean
+  can_edit_script?: boolean
   can_create_tasks?: boolean
   active: boolean
   added_by: string
@@ -70,4 +72,11 @@ export function membershipPayload(m: Membership) {
     canCreateTasks: !!m.can_create_tasks,
     active: m.active,
   }
+}
+
+export async function saveContentMembership(m: Membership) {
+  const { error } = await supabase.rpc("save_content_membership", {
+    payload: { ...membershipPayload(m), editSongs: !!m.can_edit_repertoire, editScript: !!m.can_edit_script },
+  })
+  if (error) throw new Error(error.message)
 }

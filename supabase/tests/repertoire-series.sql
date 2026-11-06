@@ -14,13 +14,14 @@ SELECT id,CASE WHEN right(id::text,1) IN ('1','3') THEN current_setting('test.mi
 INSERT INTO private.ministry_members(person_id,ministry_id,function_ids,added_by) VALUES('e1000000-0000-0000-0000-000000000004',current_setting('test.mid1')::uuid,ARRAY[current_setting('test.fid1')::uuid],'e1000000-0000-0000-0000-000000000001');
 INSERT INTO private.general_admins VALUES('e1000000-0000-0000-0000-000000000001');
 UPDATE public.profiles SET is_admin=true WHERE id='e1000000-0000-0000-0000-000000000001';
+UPDATE private.ministry_members SET can_edit_script=true WHERE person_id='e1000000-0000-0000-0000-000000000001';
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','e1000000-0000-0000-0000-000000000001',true);
 DO $$ DECLARE eid uuid;aid uuid;sid uuid;period uuid;preview jsonb;args jsonb;snap jsonb;BEGIN
  eid:=(public.event_portal('save',jsonb_build_object('ministryId',current_setting('test.mid1'),'title','Workflow fixture','startsAt','2030-01-31T18:00:00Z','endsAt','2030-01-31T20:00:00Z','sharedWith',jsonb_build_array(current_setting('test.mid2'))))->>'id')::uuid;
  PERFORM set_config('test.eid',eid::text,true);
 
- PERFORM public.repertoire_portal('configure',jsonb_build_object('eventId',eid,'enabled',true));
+NULL;
  PERFORM public.repertoire_portal('save',jsonb_build_object('eventId',eid,'version',0,'songs','[{"title":"Teste","key":"C","version":"","chords":"C G","url":""}]'::jsonb,'script','Roteiro original'));
 
  args:=jsonb_build_object('eventId',eid,'version',1,'frequency','monthly','count',3,'timezone','America/Sao_Paulo','copyAssignments',false,'copyRepertoire',true,'repertoireVersion',1,'confirmed',true);

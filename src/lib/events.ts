@@ -5,6 +5,7 @@ export interface MinistryOption {
 }
 export interface ChurchEvent {
   id: string
+  ministryName?: string
   ministry_id: string
   title: string
   description: string

@@ -23,8 +23,7 @@ export function MinistryEvents({ ministryId }: { ministryId: string }) {
         )}
       </div>
       <p className="text-sm text-muted-foreground">
-        Aqui aparecem somente os eventos em que você está escalado neste
-        ministério. Consulte os demais no calendário.
+        A liderança vê os eventos e escalas do ministério. A administração geral vê todos os ministérios. Os demais membros veem suas próprias escalas.
       </p>
       <div className="flex items-center gap-3">
         <Button
@@ -56,7 +55,7 @@ export function MinistryEvents({ ministryId }: { ministryId: string }) {
         </p>
       ) : !events.length ? (
         <p className="text-sm text-muted-foreground">
-          Você não está escalado em eventos neste mês.
+          Nenhum evento ou escala para mostrar neste mês.
         </p>
       ) : (
         events.map((e) => (
@@ -71,7 +70,7 @@ export function MinistryEvents({ ministryId }: { ministryId: string }) {
             </span>
             <span className="mt-1 block text-sm text-muted-foreground">
               {new Date(e.starts_at).toLocaleString()}
-              {e.ministry_id !== ministryId ? " · Compartilhado" : ""}
+              {e.ministryName && ` · ${e.ministryName}`}
             </span>
           </button>
         ))

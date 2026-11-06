@@ -112,8 +112,8 @@ export function EventScheduling({
     setPreview(null)
     try {
       const source = copyRepertoire ? await repertoireApi('read', e.id) : null
-      if (copyRepertoire && (!source?.enabled || !source.canEdit || !source.version)) {
-        throw new Error('Habilite e salve o repertório antes de copiá-lo para a série.')
+      if (copyRepertoire && (!source?.enabled || !source.canEdit || !source.version || (source.songs.length > 0 && !source.canEditSongs) || (!!source.script && !source.canEditScript))) {
+        throw new Error('Para copiar, salve o conteúdo e confira suas permissões sobre as músicas e o roteiro.')
       }
       const version = source?.version ?? null
       setPreview(

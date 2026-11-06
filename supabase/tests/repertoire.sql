@@ -10,6 +10,7 @@ SELECT set_config('test.fid1',(SELECT id::text FROM private.ministry_functions W
 SELECT set_config('test.fid2',(SELECT id::text FROM private.ministry_functions WHERE ministry_id=current_setting('test.mid2')::uuid LIMIT 1),true);
 INSERT INTO private.ministry_members(person_id,ministry_id,leader,function_ids,added_by)
 SELECT id,CASE WHEN right(id::text,1) IN ('1','3') THEN current_setting('test.mid1')::uuid ELSE current_setting('test.mid2')::uuid END,right(id::text,1) IN ('1','2'),ARRAY[CASE WHEN right(id::text,1) IN ('1','3') THEN current_setting('test.fid1')::uuid ELSE current_setting('test.fid2')::uuid END],'e1000000-0000-0000-0000-000000000001'::uuid FROM private.people WHERE email LIKE 'event-test-%@example.invalid' AND right(id::text,1)<>'5';
+UPDATE private.ministry_members SET can_edit_script=true WHERE person_id='e1000000-0000-0000-0000-000000000001';
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','e1000000-0000-0000-0000-000000000001',true);
 DO $$ DECLARE e jsonb; a jsonb; eid uuid; aid uuid; payload jsonb; mid1 uuid:=current_setting('test.mid1')::uuid;mid2 uuid:=current_setting('test.mid2')::uuid;
@@ -72,7 +73,7 @@ INSERT INTO private.general_admins(user_id) VALUES('e1000000-0000-0000-0000-0000
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','e1000000-0000-0000-0000-000000000001',true);
 DO $$ DECLARE eid uuid:=current_setting('test.eid')::uuid; r jsonb; p jsonb; BEGIN
-r:=public.repertoire_portal('configure',jsonb_build_object('eventId',eid,'enabled',true));
+NULL;
 END $$;
 RESET ROLE;
 UPDATE private.events SET cancelled=false WHERE id=current_setting('test.eid')::uuid;

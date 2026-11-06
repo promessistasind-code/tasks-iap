@@ -3,7 +3,7 @@ import {pathToFileURL} from 'node:url'
 const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href)
 const browser=await chromium.launch({headless:true,channel:'msedge'})
 const page=await browser.newPage()
-let value={enabled:false,canConfigure:true,canEdit:false,version:0,songs:[],script:''}
+let value={enabled:true,canEdit:true,canEditSongs:true,canEditScript:true,version:0,songs:[],script:''}
 let saves=0
 let library=[]
 try {
@@ -14,11 +14,10 @@ try {
    if(p.op==='archive') library=[]
    return route.fulfill({json:p.op==='list'?library:library[0]??{ok:true}})
   }
-  if(p?.op==='configure')value={...value,enabled:p.payload.enabled,canEdit:p.payload.enabled}
   if(p?.op==='save'){saves++;value={...value,...p.payload,version:value.version+1}}
   await route.fulfill({json:value})
  })
- await page.goto('http://127.0.0.1:5174')
+ await page.goto(process.env.TEST_URL??'http://127.0.0.1:5174')
  await page.evaluate(async()=>{
   const reactModule=await import('/node_modules/.vite/deps/react.js')
   const React=reactModule.default??reactModule
@@ -28,7 +27,6 @@ try {
   const el=document.createElement('div');document.body.replaceChildren(el)
   createRoot(el).render(React.createElement(EventRepertoire,{eventId:'fixture'}))
  })
- await page.getByText('Habilitar repertório neste ministério',{exact:true}).click()
  await page.getByText('Editar repertório',{exact:true}).click()
  await page.getByText('Adicionar música',{exact:true}).click()
  assert.equal(await page.getByText('Salvar repertório',{exact:true}).isEnabled(),false)

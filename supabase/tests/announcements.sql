@@ -29,7 +29,8 @@ SELECT public.announcement_portal('save',jsonb_build_object('title','Expired fix
 SELECT public.announcement_portal('save',jsonb_build_object('title','Disabled fixture','image_path','a1000000-0000-0000-0000-000000000002/a3000000-0000-0000-0000-000000000001.webp','image_alt','Test image','starts_at',now()-interval '1 hour','ends_at',now()+interval '1 hour','enabled',false));
 SELECT set_config('request.jwt.claim.sub','a1000000-0000-0000-0000-000000000003',true);
 DO $$ BEGIN
- IF jsonb_array_length(public.announcement_portal('list')->'items')<>1 THEN RAISE EXCEPTION 'Draft/expired visibility incorrect'; END IF;
+ IF (SELECT count(*) FROM jsonb_array_elements(public.announcement_portal('list')->'items') item WHERE item->>'image_path'='a1000000-0000-0000-0000-000000000002/a3000000-0000-0000-0000-000000000001.webp')<>1 THEN RAISE EXCEPTION 'Draft/expired visibility incorrect'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(public.announcement_portal('list')->'items') item WHERE item->>'image_path'='a1000000-0000-0000-0000-000000000002/a3000000-0000-0000-0000-000000000001.webp' AND item->>'title'='Active fixture') THEN RAISE EXCEPTION 'Active fixture missing'; END IF;
  IF NOT EXISTS(SELECT 1 FROM storage.objects WHERE bucket_id='announcement-images') THEN RAISE EXCEPTION 'Cannot read active image'; END IF;
 END $$;
 RESET ROLE;
